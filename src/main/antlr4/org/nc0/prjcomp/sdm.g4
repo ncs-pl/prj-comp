@@ -1,52 +1,61 @@
+// Copyright (c) 2026.  All rights reserved.
+
 grammar sdm; // software, data and methods
 
+// Java files header
 @header {
 // Copyright (c) 2026.  All rights reserved.
 
 package org.nc0.prjcomp.parser;
 }
 
-// Lexèmes
+// Tokens
 
-Id : [a-zA-Z][0-9a-zA-Z_]*;
-Int : [0-9]+;
+Id: [a-zA-Z][0-9a-zA-Z_]*;
+Int: [0-9]+;
 
-WS : [ \t\r\n]+ -> skip;
-Char : '\'' . '\'';
+WS: [ \t\r\n]+ -> skip;
+Char: '\'' . '\'';
 
-// Grammaire
+// Grammar rules
 
-program : (methodDecl)*mainMethod;
+program: (methodDecl)* mainMethod
+       ;
 
-mainMethod : 'org.nc0.prjcomp.main' '(' ')' statement;
-methodDecl : type Id '(' (formal (',' formal)*)? ')' statement ;
+mainMethod: 'main' '(' ')' statement
+          ;
 
-formal : type Id;
+methodDecl: type Id '(' (formal (',' formal)*)? ')' statement
+          ;
 
-type : 'int'		#intType
-	|'boolean'	#boolType
-;
-statement : '{' statement* '}'					#statList
-	|'if' '(' exp ')' statement 'else' statement		#statIf
-	|'while' '(' exp ')' statement				#statWhile
-	|'for' '(' statement  exp ';'  statement ')' statement  #statFor
-	|'print' '(' exp ')' ';'				#statPrint
-	|Id '=' exp ';'						#statAff
-	|Id '++' ';'						#statIncr
-	|'return' exp ';'					#statReturn
-	|type Id ';'						#statVarDecl
-	|type Id '=' exp ';'					#statVarDeclAff
-;
+formal: type Id
+      ;
 
-exp : exp op=('&&' |'<' |'>'|'!='|'/'| '+' | '-' |'*'|'=='|'+='|'||'|'<='|'>=') exp	#exBinop
-	|op=('!'|'-') exp								#exUnop
-	|Int										#exInt	
-	|'true'										#exTrue
-	|'false'									#exFalse	
-	|Id										#exId
-	|'(' exp ')'									#exParenthesis
-	|Id '(' (exp (',' exp)*)?  ')'							#exCall
-	|'read' '(' ')'									#exRead
-;
+type: 'int'      #intType
+    | 'boolean'  #boolType
+    ;
+
+statement: '{' statement* '}'                                     #statList
+         | 'if' '(' exp ')' statement 'else' statement            #statIf
+         | 'while' '(' exp ')' statement                          #statWhile
+         | 'for' '(' statement  exp ';'  statement ')' statement  #statFor
+         | 'print' '(' exp ')' ';'                                #statPrint
+         | Id '=' exp ';'                                         #statAff
+         | Id '++' ';'                                            #statIncr
+         | 'return' exp ';'                                       #statReturn
+         | type Id ';'                                            #statVarDecl
+         | type Id '=' exp ';'                                    #statVarDeclAff
+         ;
+
+exp: exp op=('&&' |'<' |'>'|'!='|'/'| '+' | '-' |'*'|'=='|'+='|'||'|'<='|'>=') exp  #exBinop
+   | op=('!'|'-') exp                                                               #exUnop
+   | Int                                                                            #exInt
+   | 'true'                                                                         #exTrue
+   | 'false'                                                                        #exFalse
+   | Id                                                                             #exId
+   | '(' exp ')'                                                                    #exParenthesis
+   | Id '(' (exp (',' exp)*)?  ')'                                                  #exCall
+   | 'read' '(' ')'                                                                 #exRead
+   ;
 
 
