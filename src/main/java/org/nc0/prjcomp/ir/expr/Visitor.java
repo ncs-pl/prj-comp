@@ -1,0 +1,10 @@
+package org.nc0.prjcomp.ir.expr;
+
+public interface Visitor<T> {
+    public T visit(Byte exp);
+    public T visit(Int exp);
+    public T visit(ReadReg exp);
+    public T visit(Unary exp);
+    public T visit(Binary exp);
+}
+
