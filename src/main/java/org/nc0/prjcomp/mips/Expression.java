@@ -1,5 +1,6 @@
 package org.nc0.prjcomp.mips;
 
+import org.nc0.prjcomp.ast.BinOp;
 import org.nc0.prjcomp.ir.Register;
 import org.nc0.prjcomp.ir.expr.*;
 import org.nc0.prjcomp.ir.expr.Byte;
@@ -9,7 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public class Expression implements org.nc0.prjcomp.ir.expr.Visitor<List<String>> {
+public class Expression implements Visitor<List<String>> {
     //À l’issue de la visite d’une expression, on génère une liste
     //d’instructions assembleur à l’issue de laquelle le résultat du calcul
     //de l’expression est stocké sur le sommet de la pile.
@@ -78,7 +79,7 @@ public class Expression implements org.nc0.prjcomp.ir.expr.Visitor<List<String>>
         List<String> codeRight = exp.getRight().accept(this);
 
         String op = null;
-        org.nc0.prjcomp.ast.BinOp eOp = exp.getOp();
+        BinOp eOp = exp.getOp();
 
         switch (eOp) {
             case ADD -> op = "add";
@@ -96,7 +97,7 @@ public class Expression implements org.nc0.prjcomp.ir.expr.Visitor<List<String>>
         }
         List<String> asmCode = codeLeft;
 
-        //TODO…
+        // TODO...
 
         asmCode.addAll(Asm.push("$t0"));
 

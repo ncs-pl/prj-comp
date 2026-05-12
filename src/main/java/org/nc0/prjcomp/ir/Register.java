@@ -1,10 +1,15 @@
 package org.nc0.prjcomp.ir;
 
-public class Register
-{
+public class Register {
+    static private int lastRegister;
     final private int id;
     final private Type type;
-    static private int lastRegister;
+
+    public Register(Type type) {
+        this.type = type;
+        this.id = lastRegister;
+        lastRegister += 1;
+    }
 
     public Type getType() {
         return type;
@@ -13,11 +18,5 @@ public class Register
     @Override
     public String toString() {
         return "reg" + id;
-    }
-
-    public Register(Type type) {
-        this.type = type;
-        this.id = lastRegister;
-        lastRegister += 1;
     }
 }

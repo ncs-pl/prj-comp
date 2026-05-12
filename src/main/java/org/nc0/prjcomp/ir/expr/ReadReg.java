@@ -10,11 +10,6 @@ public class ReadReg extends Expression {
         this.register = register;
     }
 
-    @Override
-    public Type getType() {
-        return register.getType();
-    }
-
     public Register getRegister() {
         return register;
     }
@@ -27,5 +22,10 @@ public class ReadReg extends Expression {
     @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visit(this);
+    }
+
+    @Override
+    public Type getType() {
+        return register.getType();
     }
 }

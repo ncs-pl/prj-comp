@@ -1,15 +1,14 @@
 package org.nc0.prjcomp.ir.com;
 
-public class Jump extends Command
-{
+public class Jump extends Command {
     final private Label gotoLabel;
-
-    public Label getGotoLabel() {
-        return gotoLabel;
-    }
 
     public Jump(Label gotoLabel) {
         this.gotoLabel = gotoLabel;
+    }
+
+    public Label getGotoLabel() {
+        return gotoLabel;
     }
 
     @Override

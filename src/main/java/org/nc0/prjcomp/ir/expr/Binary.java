@@ -40,7 +40,6 @@ public class Binary extends Expression {
     public Type getType() {
         return switch (op) {
             case ADD, MIN -> Type.INT;
-            case AND, OR, EQ, LT -> Type.BYTE;
             default -> Type.BYTE;
         };
     }

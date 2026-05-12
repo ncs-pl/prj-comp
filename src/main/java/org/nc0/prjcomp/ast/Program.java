@@ -1,18 +1,22 @@
 package org.nc0.prjcomp.ast;
- import java.util.List;
 
-public class Program extends Node{
-	private List<MethodDecl> listMethodDecl;
+import java.util.List;
 
-	public Program(Position pos, List<MethodDecl> lm){
-		this.position=pos;
-		this.listMethodDecl=lm;
-	}
+public class Program extends Node {
+    private final List<MethodDecl> listMethodDecl;
 
-	public List<MethodDecl> getListMethodDecl(){return listMethodDecl;}
-	public <T> T accept(Visitor<T> visitor){
-		return visitor.visit(this);
-	}
+    public Program(Position pos, List<MethodDecl> lm) {
+        this.position = pos;
+        this.listMethodDecl = lm;
+    }
+
+    public List<MethodDecl> getListMethodDecl() {
+        return listMethodDecl;
+    }
+
+    public <T> T accept(Visitor<T> visitor) {
+        return visitor.visit(this);
+    }
 }
 			
 	

@@ -264,7 +264,7 @@ public class Translate {
 
             List<org.nc0.prjcomp.ast.Type> argumentTypes = getArgumentTypes(exp.getArgs());
             assert signature != null;
-            org.nc0.prjcomp.ast.Type returnType = signature.getReturnType();
+            org.nc0.prjcomp.ast.Type returnType = signature.returnType();
 
             Frame frame = frames.get(functionName);
             return makeFunCall(returnType, frame, arguments, code);

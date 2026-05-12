@@ -11,13 +11,11 @@ import org.nc0.prjcomp.parser.sdmVisitor;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class AstBuild extends sdmBaseVisitor<Node> implements sdmVisitor<Node> {
-
     @Override
     public Node visitProgram(sdmParser.ProgramContext ctx) {
         List<sdmParser.MethodDeclContext> listMetCont = ctx.methodDecl();
-        List<MethodDecl> metList = new ArrayList<MethodDecl>();
+        List<MethodDecl> metList = new ArrayList<>();
         for (sdmParser.MethodDeclContext md : listMetCont) {
             metList.add((MethodDecl) visit(md));
         }
@@ -51,15 +49,13 @@ public class AstBuild extends sdmBaseVisitor<Node> implements sdmVisitor<Node> {
         Block block = new Block(position(ctx), statement);
 
         List<FormalContext> formalContextList = ctx.formal();
-        List<Formal> formalList = new ArrayList<Formal>();
+        List<Formal> formalList = new ArrayList<>();
         for (FormalContext fc : formalContextList) {
             Formal f = (Formal) visit(fc);
             formalList.add(f);
         }
 
         return new MethodDecl(position(ctx), type, id, formalList, block);
-
-
     }
 
     @Override
@@ -83,7 +79,7 @@ public class AstBuild extends sdmBaseVisitor<Node> implements sdmVisitor<Node> {
     @Override
     public Node visitStatList(sdmParser.StatListContext ctx) {
         List<StatementContext> listStat = ctx.statement();
-        List<Statement> statList = new ArrayList<Statement>();
+        List<Statement> statList = new ArrayList<>();
         for (StatementContext stat : listStat) {
             statList.add((Statement) visit(stat));
         }

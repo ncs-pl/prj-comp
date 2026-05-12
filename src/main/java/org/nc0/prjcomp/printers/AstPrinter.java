@@ -1,114 +1,117 @@
 package org.nc0.prjcomp.printers;
-import java.util.List;
+
 import org.nc0.prjcomp.ast.*;
 
-public class AstPrinter extends org.nc0.prjcomp.ast.BaseVisitor<Void>{
-	private int indent;
-	public void indent(){
-		System.out.println();
-		for(int i=0; i<indent;i++){
-			print("   ");
-		}
-	}
-	private void print(String s){
-		System.out.print(s);
-	}
-		
-	public void end(){
-		print(";");
-	}
+import java.util.List;
 
-	public AstPrinter(){
-		super(null);
-		indent=0;
-	}
+public class AstPrinter extends BaseVisitor<Void> {
+    private int indent;
 
+    public AstPrinter() {
+        super(null);
+        indent = 0;
+    }
 
-	public Void visit(StatVarDecl v){
-		indent();
-		print(v.getType().toString());
-		print(" ");
-		print(v.getId().toString());
-		end();
-		return null;
-	}
-	public Void visit(StatPrint sp){
-		indent();
-		print("print("
-		+ sp.getExpression().toString()
-		+")");end();
-		return null;
-	}
-	public Void visit(MethodDecl m){
-		indent();
-		print(m.getType().toString()
-		+ " "
-		+m.getId().toString()
-		+"(");
-		Formal f;
-		for(int i=0; i<m.getFormal().size();i++){
-			f=m.getFormal().get(i);
-			f.accept(this);
-			if(i<m.getFormal().size()-1){
-				print(",");
-			}
-		}
-		print(")");
-		m.getBlock().accept(this);
-		return null;
-	}
+    public Void visit(StatVarDecl v) {
+        indent();
+        print(v.getType().toString());
+        print(" ");
+        print(v.getId().toString());
+        end();
+        return null;
+    }
 
-	public Void visit(StatReturn s){
-		indent();
-		print("return "+s.getExpression().toString());
-		end();
-		return null;
-	}
+    public void indent() {
+        System.out.println();
+        for (int i = 0; i < indent; i++) {
+            print("   ");
+        }
+    }
 
-	
-	public Void visit(Formal f){
-		print(f.getType().toString()
-		+" "
-		+f.getId().toString());
-		return null;
-	}
-	
-	public Void visit(StatList sl){
-		List<Statement> l=sl.getStatList();
-		for(Statement s : l){
-			s.accept(this);
-		}
+    private void print(String s) {
+        System.out.print(s);
+    }
 
-		return null;
-	}
+    public void end() {
+        print(";");
+    }
 
-	public Void visit(StatIf a){
-		Expression e = a.getExpression();
-		Block ib = a.getIfBlock();
-		Block eb= a.getElseBlock();
-		indent();
-		print("if("+e.toString()+")");
-		ib.accept(this);
-		indent();
-		print("else");
-		eb.accept(this);
+    public Void visit(Formal f) {
+        print(f.getType().toString() + " " + f.getId().toString());
+        return null;
+    }
 
-		return null;
-	}
-	public Void visit(StatWhile s){
-		Expression e= s.getExpression();
-		Block b = s.getBlock();
-		indent();
-		print("while("+e.toString()+")");
-		b.accept(this);
-		return null;
-	}
-	public Void visit(Block b){
-		System.out.print("{");indent++;
-		b.getStatement().accept(this);
-		indent--;indent();System.out.print("}");
-		return null;
-	}
+    public Void visit(StatReturn s) {
+        indent();
+        print("return " + s.getExpression().toString());
+        end();
+        return null;
+    }
+
+    public Void visit(MethodDecl m) {
+        indent();
+        print(m.getType().toString() + " " + m.getId().toString() + "(");
+        Formal f;
+        for (int i = 0; i < m.getFormal().size(); i++) {
+            f = m.getFormal().get(i);
+            f.accept(this);
+            if (i < m.getFormal().size() - 1) {
+                print(",");
+            }
+        }
+        print(")");
+        m.getBlock().accept(this);
+        return null;
+    }
+
+    public Void visit(StatIf a) {
+        Expression e = a.getExpression();
+        Block ib = a.getIfBlock();
+        Block eb = a.getElseBlock();
+        indent();
+        print("if(" + e.toString() + ")");
+        ib.accept(this);
+        indent();
+        print("else");
+        eb.accept(this);
+
+        return null;
+    }
+
+    public Void visit(StatList sl) {
+        List<Statement> l = sl.getStatList();
+        for (Statement s : l) {
+            s.accept(this);
+        }
+
+        return null;
+    }
+
+    public Void visit(StatPrint sp) {
+        indent();
+        print("print(" + sp.getExpression().toString() + ")");
+        end();
+        return null;
+    }
+
+    public Void visit(StatWhile s) {
+        Expression e = s.getExpression();
+        Block b = s.getBlock();
+        indent();
+        print("while(" + e.toString() + ")");
+        b.accept(this);
+        return null;
+    }
+
+    public Void visit(Block b) {
+        System.out.print("{");
+        indent++;
+        b.getStatement().accept(this);
+        indent--;
+        indent();
+        System.out.print("}");
+        return null;
+    }
 
 
 /*	

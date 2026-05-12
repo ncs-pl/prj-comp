@@ -7,6 +7,12 @@ public class CJump extends Command {
     final private Label trueLabel;
     final private Label falseLabel;
 
+    public CJump(Expression condition, Label trueLabel, Label falseLabel) {
+        this.condition = condition;
+        this.trueLabel = trueLabel;
+        this.falseLabel = falseLabel;
+    }
+
     public Expression getCondition() {
         return condition;
     }
@@ -19,16 +25,9 @@ public class CJump extends Command {
         return falseLabel;
     }
 
-    public CJump(Expression condition, Label trueLabel, Label falseLabel) {
-        this.condition = condition;
-        this.trueLabel = trueLabel;
-        this.falseLabel = falseLabel;
-    }
-
     @Override
     public String toString() {
-        return "CJump (" + condition + ", "
-                + trueLabel + ", " + falseLabel + ")";
+        return "CJump (" + condition + ", " + trueLabel + ", " + falseLabel + ")";
     }
 
     @Override

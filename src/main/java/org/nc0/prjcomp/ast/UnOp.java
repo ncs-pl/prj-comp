@@ -1,16 +1,13 @@
 package org.nc0.prjcomp.ast;
- public enum UnOp{
-	NOT{
-		public String toString(){
-			return "!";
-		}
-	},
-	MIN{
-		public String toString(){
-			return "-";
-		}
-	}
 
-
-
+public enum UnOp {
+    NOT {
+        public String toString() {
+            return "!";
+        }
+    }, MIN {
+        public String toString() {
+            return "-";
+        }
+    }
 }

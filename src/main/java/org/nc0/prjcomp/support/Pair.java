@@ -1,13 +1,12 @@
 package org.nc0.prjcomp.support;
 
 public record Pair<U, V>(U fst, V snd) {
-
-  @Override
-  public boolean equals(Object o) {
-    System.out.println("eq");
-    if (o instanceof Pair p) {
-      return this.fst.equals(p.fst()) && this.snd.equals(p.snd());
+    @Override
+    public boolean equals(Object o) {
+        System.out.println("eq");
+        if (o instanceof Pair(Object fst1, Object snd1)) {
+            return this.fst.equals(fst1) && this.snd.equals(snd1);
+        }
+        return false;
     }
-    return false;
-  }
 }

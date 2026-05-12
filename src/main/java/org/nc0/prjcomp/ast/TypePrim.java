@@ -21,8 +21,7 @@ public class TypePrim extends Type {
     }
 
     public Type copy() {
-        Type t = new TypePrim(position, prim);
-        return t;
+        return new TypePrim(position, prim);
     }
 
     public enum Prim {

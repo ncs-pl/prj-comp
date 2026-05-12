@@ -6,11 +6,16 @@ import org.nc0.prjcomp.ir.expr.Expression;
 
 import java.util.List;
 
-public class FunCall extends Command
-{
+public class FunCall extends Command {
     final private Register register;
     final private Frame frame;
     final private List<Expression> arguments;
+
+    public FunCall(Register register, Frame frame, List<Expression> arguments) {
+        this.register = register;
+        this.frame = frame;
+        this.arguments = arguments;
+    }
 
     public Frame getFrame() {
         return frame;
@@ -24,15 +29,9 @@ public class FunCall extends Command
         return arguments;
     }
 
-    public FunCall(Register register, Frame frame, List<Expression> arguments) {
-        this.register = register;
-        this.frame = frame;
-        this.arguments = arguments;
-    }
-
     @Override
     public String toString() {
-        return register + " := call " + frame.getEntryPoint().toString().replace(":","") + arguments;
+        return register + " := call " + frame.getEntryPoint().toString().replace(":", "") + arguments;
     }
 
     @Override

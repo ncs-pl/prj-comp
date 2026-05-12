@@ -1,11 +1,9 @@
 package org.nc0.prjcomp.ir.expr;
 
-
 import org.nc0.prjcomp.ast.UnOp;
 import org.nc0.prjcomp.ir.Type;
 
 public class Unary extends Expression {
-
     final private Expression exp;
     final private UnOp op;
 
@@ -35,7 +33,6 @@ public class Unary extends Expression {
     @Override
     public Type getType() {
         return switch (op) {
-            case NOT -> Type.BYTE;
             case MIN -> Type.INT;
             default -> Type.BYTE;
         };

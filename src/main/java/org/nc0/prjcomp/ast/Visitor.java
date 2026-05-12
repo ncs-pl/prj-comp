@@ -1,18 +1,31 @@
 package org.nc0.prjcomp.ast;
-public interface Visitor <T> extends VisitorExp<T>{
-	public T visit(Formal f);
-	public T visit(Id e);
-	public T visit(MethodDecl m);
-	public T visit(Program p);
-	public T visit(StatAff a);
-	public T visit(StatIf s);
-	public T visit(StatList s);
-	public T visit(StatPrint s);
-	public T visit(StatWhile s);
-	public T visit(TypePrim t);
-	public T visit(StatVarDecl t);
-	public T visit(StatReturn t);
-	public T visit(Block b);
+
+public interface Visitor<T> extends VisitorExp<T> {
+    T visit(Formal f);
+
+    T visit(Id e);
+
+    T visit(MethodDecl m);
+
+    T visit(Program p);
+
+    T visit(StatAff a);
+
+    T visit(StatIf s);
+
+    T visit(StatList s);
+
+    T visit(StatPrint s);
+
+    T visit(StatWhile s);
+
+    T visit(TypePrim t);
+
+    T visit(StatVarDecl t);
+
+    T visit(StatReturn t);
+
+    T visit(Block b);
 
 }
 

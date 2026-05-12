@@ -5,14 +5,26 @@ import org.nc0.prjcomp.ir.com.Label;
 import java.util.LinkedList;
 import java.util.List;
 
-public class Frame
-{
+public class Frame {
     final private Label entryPoint;
     final private Label exitPoint;
     final private List<Register> parameters;
     final private Register result;
     final private List<Register> locals;
     private int size;
+
+    public Frame(Label entryPoint, Label exitPoint, List<Register> parameters, Register result) {
+        this(entryPoint, exitPoint, parameters, result, 0);
+    }
+
+    private Frame(Label entryPoint, Label exitPoint, List<Register> parameters, Register result, int size) {
+        this.entryPoint = entryPoint;
+        this.exitPoint = exitPoint;
+        this.parameters = parameters;
+        this.result = result;
+        this.size = size;
+        this.locals = new LinkedList<>();
+    }
 
     public Label getEntryPoint() {
         return entryPoint;
@@ -25,7 +37,6 @@ public class Frame
     public List<Register> getParameters() {
         return parameters;
     }
-
 
     public Register getResult() {
         return result;
@@ -49,36 +60,8 @@ public class Frame
 
     @Override
     public String toString() {
-        return "Frame{" +
-                "\n  entryPoint=" + entryPoint +
-                ",\n  exitPoint=" + exitPoint +
-                ",\n  parameters=" + parameters +
+        return "Frame{" + "\n  entryPoint=" + entryPoint + ",\n  exitPoint=" + exitPoint + ",\n  parameters=" + parameters +
                 //",\n  passedByRef=" + passedByRef +
-                ",\n  result=" + result +
-                ",\n  locals=" + locals +
-                ",\n  size=" + size +
-                "\n}";
+                ",\n  result=" + result + ",\n  locals=" + locals + ",\n  size=" + size + "\n}";
     }
-
-    private Frame(Label entryPoint, 
-		    Label exitPoint, 
-		    List<Register> parameters,
-		    Register result, 
-		    int size) {
-        this.entryPoint = entryPoint;
-        this.exitPoint = exitPoint;
-        this.parameters = parameters;
-        this.result = result;
-        this.size = size;
-        this.locals = new LinkedList<>();
-    }
-
-    public Frame(Label entryPoint, 
-		    Label exitPoint, 
-		    List<Register> parameters, 
-		    Register result) {
-        this(entryPoint, exitPoint, parameters, result, 0);
-    }
-    
-
 }

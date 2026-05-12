@@ -17,36 +17,19 @@ import java.util.List;
 
 public class Program {
 
+    public static final Errors errors = new Errors();
     static final int DEFAULT_SIZE = 4;
 
-    public static final Errors errors = new Errors();
-
-    public static class AsmWriter extends PrintWriter{
-        
-        AsmWriter(Path path) throws FileNotFoundException {
-            super(new OutputStreamWriter(new FileOutputStream(path.toFile())));
+    static public void generate(Path path, Label mainLabel, List<Pair<Frame, List<Command>>> fragments) {
+        try {
+            AsmWriter output = new AsmWriter(path);
+            mipsTextGeneration(output, mainLabel);
+            framesGeneration(output, fragments);
+            supportGeneration(output);
+            output.close();
+        } catch (FileNotFoundException e) {
+            errors.add(null, "File not found: " + path);
         }
-        
-        void transferFrom(BufferedReader in) {
-            try {
-                while (in.ready())
-                    println(in.readLine());
-            } catch (IOException e) {
-                errors.add(null,"Transferring resources");
-            }
-        }
-     
-        void writeAllLines(List<String> lines){
-            for (String line : lines)
-                println(line);
-        }
-    }
-
-    static public void framesGeneration(AsmWriter output,
-                                        List<Pair<Frame, List<Command>>> fragments) {
-        org.nc0.prjcomp.mips.Frame frameGenerator = new org.nc0.prjcomp.mips.Frame(errors);
-        for (Pair<Frame, List<Command>> fragment : fragments)
-            output.writeAllLines(frameGenerator.generate(fragment));
     }
 
     static private void mipsTextGeneration(AsmWriter output, Label mainLabel) {
@@ -61,19 +44,25 @@ public class Program {
         output.writeAllLines(asmCode);
     }
 
+    static public void framesGeneration(AsmWriter output, List<Pair<Frame, List<Command>>> fragments) {
+        org.nc0.prjcomp.mips.Frame frameGenerator = new org.nc0.prjcomp.mips.Frame(errors);
+        for (Pair<Frame, List<Command>> fragment : fragments)
+            output.writeAllLines(frameGenerator.generate(fragment));
+    }
+
     static private void supportGeneration(AsmWriter output) {
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         try {
             URL url = classLoader.getResource("src/main/resources/list.txt");
-            if (url == null){
-                errors.add(null,"Resources list cannot be found");
+            if (url == null) {
+                errors.add(null, "Resources list cannot be found");
             } else {
                 List<String> files = Files.readAllLines(Paths.get(url.toURI()));
                 BufferedReader in;
                 for (String file : files) {
                     InputStream stream = classLoader.getResourceAsStream(file);
                     if (stream == null)
-                        errors.add(null,"Resources file "+file+" cannot be opened");
+                        errors.add(null, "Resources file " + file + " cannot be opened");
                     else {
                         in = new BufferedReader(new InputStreamReader(stream));
                         output.transferFrom(in);
@@ -82,21 +71,28 @@ public class Program {
                 }
             }
         } catch (URISyntaxException | IOException e) {
-            errors.add(null,"Error while reading resources");
+            errors.add(null, "Error while reading resources");
         }
     }
 
+    public static class AsmWriter extends PrintWriter {
 
-    static public void generate(Path path, Label mainLabel,
-                                List<Pair<Frame, List<Command>>> fragments) {
-        try {
-            AsmWriter output = new AsmWriter(path);
-            mipsTextGeneration(output, mainLabel);
-            framesGeneration(output, fragments);
-            supportGeneration(output);
-            output.close();
-        } catch (FileNotFoundException e) {
-            errors.add(null,"File not found: " + path);
+        AsmWriter(Path path) throws FileNotFoundException {
+            super(new OutputStreamWriter(new FileOutputStream(path.toFile())));
+        }
+
+        void transferFrom(BufferedReader in) {
+            try {
+                while (in.ready())
+                    println(in.readLine());
+            } catch (IOException e) {
+                errors.add(null, "Transferring resources");
+            }
+        }
+
+        void writeAllLines(List<String> lines) {
+            for (String line : lines)
+                println(line);
         }
     }
 }

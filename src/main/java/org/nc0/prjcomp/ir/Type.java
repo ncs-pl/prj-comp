@@ -6,12 +6,10 @@ public enum Type {
         public String toString() {
             return "byte";
         }
-    },
-    INT {
+    }, INT {
         @Override
         public String toString() {
             return "int";
         }
-    };
-
+    }
 }
