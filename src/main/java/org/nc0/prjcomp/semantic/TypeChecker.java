@@ -7,7 +7,6 @@ import org.nc0.prjcomp.support.Errors;
 
 import java.util.List;
 
-
 public class TypeChecker extends BaseVisitor<Type> {
     private final static Type statType = new TypePrim(null, TypePrim.Prim.STAT);
     private final static Type errType = new TypePrim(null, TypePrim.Prim.IND);

@@ -9,7 +9,6 @@ import java.util.Stack;
 public class VisitedBlocks {
     private final Stack<Block> blocks;
 
-
     public VisitedBlocks() {
         this.blocks = new Stack<>();
     }
@@ -29,5 +28,4 @@ public class VisitedBlocks {
     public Block current() {
         return blocks.peek();
     }
-
 }

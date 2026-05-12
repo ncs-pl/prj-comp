@@ -7,7 +7,7 @@ import org.nc0.prjcomp.support.Errors;
 
 import java.util.List;
 
-public class TableBuilder extends org.nc0.prjcomp.ast.BaseVisitor<Void> {
+public class TableBuilder extends BaseVisitor<Void> {
     //Todo : tester si les mots ne sont pas réservés.
 
     private final SymbolTable symbolTable;
@@ -38,39 +38,33 @@ public class TableBuilder extends org.nc0.prjcomp.ast.BaseVisitor<Void> {
     }
 
     @Override
-    public Void visit(MethodDecl md) {
-        Block b = md.getBlock();
-        List<Formal> lf = md.getFormal();
-        String id = md.getId().getName();
-        String name = md.getType().toString();
-
-        MethodSig ms = MethodSig.signatureOf(md);
-        symbolTable.addMethod(id, ms);
-
-        symbolTable.localTable(b);
-
-        visitedBlocks.enter(b);
-
-        for (Formal f : lf) {
-            symbolTable.addLocalVariable(visitedBlocks.current(), f.getId().getName(), f.getType());
-        }
-        super.visit(b);
+    public Void visit(MethodDecl declaration) {
+        Block body = declaration.getBlock();
+        List<Formal> parameters = declaration.getFormal();
+        String id = declaration.getId().getName();
+        String type = declaration.getType().toString();
+        MethodSig signature = MethodSig.signatureOf(declaration);
+        symbolTable.addMethod(id, signature);
+        symbolTable.localTable(body);
+        visitedBlocks.enter(body);
+        parameters.forEach(f -> symbolTable.addLocalVariable(visitedBlocks.current(), f.getId().getName(), f.getType()));
+        super.visit(body);
         visitedBlocks.exit();
         return null;
     }
 
     @Override
-    public Void visit(StatVarDecl vd) {
-        String id = vd.getId().getName();
-        Type type = vd.getType();
+    public Void visit(StatVarDecl declaration) {
+        String id = declaration.getId().getName();
+        Type type = declaration.getType();
         Type t = symbolTable.variableLookup(id, visitedBlocks);
 
         if (t != null) {
-            errors.add(vd, " : variable " + id + " déjà déclarée en " + t.getPosition());
+            errors.add(declaration, " : variable " + id + " déjà déclarée en " + t.getPosition());
         }
         //Si on est dans un bloc :
         if (visitedBlocks.getStack().isEmpty()) {
-            errors.add(vd, "erreur : pile des blocs vide");
+            errors.add(declaration, "erreur : pile des blocs vide");
         }
         symbolTable.addLocalVariable(visitedBlocks.current(), id, type);
 
@@ -78,12 +72,11 @@ public class TableBuilder extends org.nc0.prjcomp.ast.BaseVisitor<Void> {
     }
 
     @Override
-    public Void visit(Block b) {
-        //enregistrer le bloc dans la table :
-        symbolTable.localTable(b);
-
-        visitedBlocks.enter(b);
-        super.visit(b);
+    public Void visit(Block block) {
+        // enregistrer le bloc dans la table :
+        symbolTable.localTable(block);
+        visitedBlocks.enter(block);
+        super.visit(block);
         visitedBlocks.exit();
         return null;
     }

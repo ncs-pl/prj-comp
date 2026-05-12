@@ -36,7 +36,7 @@ public class Unary extends Expression {
     public Type getType() {
         return switch (op) {
             case MIN -> Type.INT;
-            default -> Type.BYTE;
+            case NOT -> Type.BYTE;
         };
     }
 }

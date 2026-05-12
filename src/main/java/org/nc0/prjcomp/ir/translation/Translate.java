@@ -6,10 +6,11 @@ import org.nc0.prjcomp.ast.*;
 import org.nc0.prjcomp.ir.Frame;
 import org.nc0.prjcomp.ir.Register;
 import org.nc0.prjcomp.ir.Type;
-import org.nc0.prjcomp.ir.com.Command;
-import org.nc0.prjcomp.ir.com.FunCall;
-import org.nc0.prjcomp.ir.com.Label;
+import org.nc0.prjcomp.ir.com.*;
+import org.nc0.prjcomp.ir.expr.Binary;
+import org.nc0.prjcomp.ir.expr.Int;
 import org.nc0.prjcomp.ir.expr.ReadReg;
+import org.nc0.prjcomp.ir.expr.Unary;
 import org.nc0.prjcomp.semantic.MethodSig;
 import org.nc0.prjcomp.semantic.SymbolTable;
 import org.nc0.prjcomp.semantic.TypeChecker;
@@ -18,29 +19,26 @@ import org.nc0.prjcomp.support.ListTools;
 import org.nc0.prjcomp.support.Maps;
 import org.nc0.prjcomp.support.Pair;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Translate {
     private static final TypeConverter typeConverter = new TypeConverter();
 
-    private static org.nc0.prjcomp.ir.Type ofType(org.nc0.prjcomp.ast.Type type) {
+    private static Type ofType(org.nc0.prjcomp.ast.Type type) {
         return type.accept(typeConverter);
     }
 
     public static Pair<Label, List<Pair<Frame, List<Command>>>> run(SymbolTable symbolTable, Program program) {
-        TranslationVisitor translator = new TranslationVisitor(symbolTable);
+        var translator = new TranslationVisitor(symbolTable);
         program.accept(translator);
-        Errors e = translator.errors;
+        Errors errors = translator.errors;
         if (translator.mainLabel == null) {
-            e.add("pas de fonction org.nc0.prjcomp.main.");
+            errors.add("pas de fonction main.");
         }
-        if (e.hasErrors()) {
+        if (errors.hasErrors()) {
             System.out.println("Erreurs de traduction en code intermédiaire :");
-            e.print();
+            errors.print();
             System.out.println("Sortie avant production assembleur");
             System.exit(1);
         }
@@ -54,38 +52,27 @@ public class Translate {
         }
 
         @Override
-        public org.nc0.prjcomp.ir.Type visit(TypePrim type) {
+        public Type visit(TypePrim type) {
             return switch (type.getPrim()) {
-                case INT -> Type.INT;
-                case BOOL -> Type.BYTE;
-                default -> throw new Error("Traduction IR :type primitif non géré : " + type.getPrim().toString());
+                case TypePrim.Prim.INT -> Type.INT;
+                case TypePrim.Prim.BOOL -> Type.BYTE;
+                default -> throw new Error("Traduction IR : type primitif non géré : " + type.getPrim().toString());
             };
         }
     }
 
-    private static class TranslationVisitor extends org.nc0.prjcomp.ast.BaseVisitor<Result> {
-        //La table des symboles et le typeChecker, utiles pour au moins deux
-        //éléments :
-        //- Savoir à quel bloc se réfère un nom de variable (pile des blocs)
-        //- Savoir quel est le type pour les registres associés aux variables.
+    private static class TranslationVisitor extends BaseVisitor<Result> {
+        // La table des symboles et le typeChecker, utiles pour au moins deux éléments :
+        // - Savoir à quel bloc se réfère un nom de variable (pile des blocs)
+        // - Savoir quel est le type pour les registres associés aux variables.
         private final SymbolTable symbolTable;
         private final TypeChecker typeChecker;
-        //Chaque nom de méthode est associé à un frame (construit par le
-        //FramesBuilder)
-        private final Map<String, Frame> frames;
-        //Dans chaque bloc, chaque variable est associée à un registre.
-        private final Map<Block, Map<String, Register>> varToReg;
-        //Chaque méthode sera enregistrée dans une liste de paires, avec son
-        //frame et son code.
-        private final List<Pair<Frame, List<Command>>> fragments;
-        //Le frame courant, auquel on ajoute en particulier les registres
-        //temporaires nécessaires au calcul de la fonction (qui seront empilés
-        //lors de l’appel).
-        private final Frame currentFrame;
+        private final Map<String, Frame> frames; // Chaque nom de méthode est associé à une frame (construit par le FramesBuilder)
+        private final Map<Block, Map<String, Register>> varToReg; // Dans chaque bloc, chaque variable est associée à un registre.
+        private final List<Pair<Frame, List<Command>>> fragments; // Chaque méthode sera enregistrée dans une liste de paires, avec son frame et son code.
         public Errors errors;
-        //Un label spécifique, correspondant au point d’entrée de la fonction
-        //org.nc0.prjcomp.main.
-        private Label mainLabel;
+        private Frame currentFrame; // Le frame courant, auquel on ajoute en particulier les registres temporaires nécessaires au calcul de la fonction (qui seront empilés lors de l’appel).
+        private Label mainLabel; //Un label spécifique, correspondant au point d’entrée de la fonction main.
 
         public TranslationVisitor(SymbolTable symbolTable) {
             super(null);
@@ -99,14 +86,40 @@ public class Translate {
             this.errors = new Errors();
         }
 
-        //----REGISTRES-------
+        @Override
+        public Result visit(MethodDecl methodDeclaration) {
+            currentFrame = frames.get(methodDeclaration.getId().getName());
+            Result bodyResult = methodDeclaration.getBlock().accept(this);
+            fragments.add(new Pair<>(currentFrame, bodyResult.getCode()));
+            return null;
+        }
+
+        @Override
+        public Result visit(Program program) {
+            program.accept(typeChecker);
+            FramesBuilder framesBuilder = new FramesBuilder();
+            program.accept(framesBuilder);
+            program.getListMethodDecl().forEach(method -> method.accept(this));
+            return null;
+        }
+
+        @Override
+        public Result visit(StatAff affectationStatement) {
+            assert currentFrame != null;
+            Result expressionResult = affectationStatement.getExpression().accept(this);
+            Register register = this.registerLookup(affectationStatement.getId().getName());
+            var code = new LinkedList<>(expressionResult.getCode());
+            code.add(new WriteReg(register, expressionResult.getExp()));
+            return new Result(code);
+        }
+
         private Register registerLookup(String name) {
             Register reg;
             for (Block block : typeChecker.getVisitedBlocks().getStack()) {
                 Map<String, Register> map = varToReg.get(block);
 
                 reg = map.get(name);
-                //System.out.println("lookup "+block+": "+name);
+                //System.out.println("lookup "+block+": "+name);x
                 if (reg != null)
                     return reg;
             }
@@ -116,196 +129,170 @@ public class Translate {
         }
 
         @Override
-        public Result visit(MethodDecl md) {
-            //TODO
-            //-Récupérer le frame associé à la méthode,
-            //-Récupérer le code du corps de la fonction
-            //-Ajouter la paire frame/code aux fragments
-            return null;
-        }
-
-        @Override
-        public Result visit(Program program) {
-            program.accept(typeChecker);
-            FramesBuilder framesBuilder = new FramesBuilder();
-            program.accept(framesBuilder);
-            for (MethodDecl fun : program.getListMethodDecl())
-                fun.accept(this);
-            return null;
-        }
-
-        @Override
-        public Result visit(StatAff s) {
-            //	- Compilation de l’expression
-            //	- Récupération du registre lié à la variable (le registre
-            //	devrait être dans la Map, si les phases précédentes ont bien
-            //	fait leur travail.)
-            //	- Renvoyer le code permettant de calculer l’expression, auquel
-            //	on ajoute une écriture de l’expression dans le registre
-            //	obtenu au point précédent.
-            return null;
-        }
-
-        @Override
-        public Result visit(StatIf stm) {
-            //TODO
-            return null;
-        }
-
-        @Override
-        public Result visit(StatList sl) {
-            List<Command> code = new LinkedList<>();
-            for (Statement stm : sl.getStatList()) {
-                Result result = stm.accept(this);
-                code.addAll(result.getCode());
-            }
+        public Result visit(StatIf ifStatement) {
+            assert currentFrame != null;
+            Result conditionResult = ifStatement.getExpression().accept(this);
+            Result thenResult = ifStatement.getIfBlock().accept(this);
+            Result elseResult = ifStatement.getElseBlock().accept(this);
+            var labelThen = Label.fresh();
+            var labelElse = Label.fresh();
+            var labelEnd = Label.fresh();
+            var code = new LinkedList<>(conditionResult.getCode());
+            code.add(new CJump(conditionResult.getExp(), labelThen, labelElse));
+            code.add(labelThen);
+            code.addAll(thenResult.getCode());
+            code.add(new Jump(labelEnd));
+            code.add(labelThen);
+            code.addAll(elseResult.getCode());
+            code.add(new Jump(labelEnd));
+            code.add(labelEnd);
             return new Result(code);
         }
 
         @Override
-        public Result visit(StatPrint s) {
-            Expression e = s.getExpression();
-            Frame frame = new Frame(Label.named("entryPrintInt"), Label.named("exitPrintInt"), ListTools.mklist(new Register(org.nc0.prjcomp.ir.Type.INT)), new Register(org.nc0.prjcomp.ir.Type.INT));
-            Result r = e.accept(this);
-
-            List<Command> code = r.getCode();
-            List<org.nc0.prjcomp.ir.expr.Expression> args = ListTools.mklist(r.getExp());
-            //on laisse un int en retour par défaut, car toutes les fonctions
-            //doivent retourne qqchose.
-            org.nc0.prjcomp.ast.Type type = new TypePrim(null, TypePrim.Prim.INT);
-
-            return makeFunCall(type, frame, args, code);
-        }
-
-        private Result makeFunCall(org.nc0.prjcomp.ast.Type type, Frame frame, List<org.nc0.prjcomp.ir.expr.Expression> args, List<Command> code) {
-            Register reg = new Register(ofType(type));
+        public Result visit(StatList statements) {
             assert currentFrame != null;
-            currentFrame.addLocal(reg);
-            Command call = new FunCall(reg, frame, args);
-            code.add(call);
-            return new Result(new ReadReg(reg), code);
-        }
-
-
-        //-------INSTRUCTIONS--------
-
-        @Override
-        public Result visit(StatWhile stm) {
-            //TODO
-            return null;
+            LinkedList<Command> code = statements.getStatList().stream().map(statement -> statement.accept(this)).flatMap(result -> result.getCode().stream()).collect(Collectors.toCollection(LinkedList::new));
+            return new Result(code);
         }
 
         @Override
-        public Result visit(StatVarDecl stm) {
-            // Declaration de variable : nouveau registre
-            // TODO :
-            // 	-Créer un registre (avec le bon type)
-            // 	-Récupérer le bloc actuel (celui déterminé par le typeChecker
-            //	-Mettre l’id et le registre dans la map 'varToReg'
-            //	-Ajouter le registre au frame courant.
-            //	-Retourner un code vide.
-            return null;
+        public Result visit(StatPrint printStatement) {
+            assert currentFrame != null;
+            Result expressionResult = printStatement.getExpression().accept(this);
+            Label entryPoint = Label.named("print_entry");
+            Label exitPoint = Label.named("print_exit");
+            var parameters = new ArrayList<Register>();
+            parameters.add(new Register(Type.INT)); // input
+            var output = new Register(Type.INT); // NOTE(nico): all functions must return something...
+            Frame frame = new Frame(entryPoint, exitPoint, parameters, output);
+            List<org.nc0.prjcomp.ir.expr.Expression> args = ListTools.mklist(expressionResult.getExp());
+            org.nc0.prjcomp.ast.Type type = new TypePrim(null, TypePrim.Prim.INT);
+            return makeFunCall(type, frame, args, expressionResult.getCode());
         }
 
         @Override
-        public Result visit(StatReturn stm) {
-            //compiler l’expression, récupérer le registre de retour du
-            //frame courant, puis produire le code qui :
-            //  - permet de calculer l’expression
-            //  - écrit cette expression dans le registre de retour
-            //  - saute au point de sortie du frame courant
-            //  TODO
-            return null;
+        public Result visit(StatWhile whileStatement) {
+            Result conditionResult = whileStatement.getExpression().accept(this);
+            Result bodyResult = whileStatement.getBlock().accept(this);
+            Label conditionLabel = Label.fresh();
+            Label bodyLabel = Label.fresh();
+            Label endLabel = Label.fresh();
+            var code = new LinkedList<Command>();
+            code.add(conditionLabel);
+            code.addAll(conditionResult.getCode());
+            code.add(new CJump(conditionResult.getExp(), bodyLabel, endLabel));
+            code.add(bodyLabel);
+            code.addAll(bodyResult.getCode());
+            code.add(new Jump(bodyLabel));
+            code.add(endLabel);
+            return new Result(code);
         }
 
         @Override
-        public Result visit(Block b) {
-            varToReg.computeIfAbsent(b, k -> new HashMap<>());
-            typeChecker.getVisitedBlocks().enter(b);
+        public Result visit(StatVarDecl declarationStatement) {
+            assert currentFrame != null;
+            var register = new Register(Translate.ofType(declarationStatement.getType()));
+            Block block = typeChecker.getVisitedBlocks().current();
+            varToReg.computeIfAbsent(block, _ -> new HashMap<>());
+            varToReg.get(block).put(declarationStatement.getId().getName(), register);
+            currentFrame.addLocal(register);
+            return new Result(new LinkedList<>());
+        }
 
-            Statement stm = b.getStatement();
-            Result result = stm.accept(this);
-            List<Command> code = new LinkedList<>(result.getCode());
+        @Override
+        public Result visit(StatReturn returnStatement) {
+            assert currentFrame != null;
+            Result expressionResult = returnStatement.getExpression().accept(this);
+            var code = new LinkedList<>(expressionResult.getCode());
+            code.add(new WriteReg(currentFrame.getResult(), expressionResult.getExp()));
+            code.add(new Jump(currentFrame.getExitPoint()));
+            return new Result(code);
+        }
+
+        @Override
+        public Result visit(Block block) {
+            varToReg.computeIfAbsent(block, _ -> new HashMap<>());
+            typeChecker.getVisitedBlocks().enter(block);
+            Statement statement = block.getStatement();
+            Result result = statement.accept(this);
+            var code = new LinkedList<>(result.getCode());
             typeChecker.getVisitedBlocks().exit();
             return new Result(code);
         }
 
         @Override
-        public Result visit(ExpBin exp) {
-            //TODO
-            return null;
+        public Result visit(ExpBin binaryExpression) {
+            Result leftResult = binaryExpression.getLeftExp().accept(this);
+            Result rightResult = binaryExpression.getRightExp().accept(this);
+            var binary = new Binary(leftResult.getExp(), rightResult.getExp(), binaryExpression.getOp());
+            var code = new LinkedList<>(leftResult.getCode());
+            code.addAll(rightResult.getCode());
+            return new Result(binary, code);
         }
 
         @Override
-        public Result visit(ExpCallMethod exp) {
-            String functionName = exp.getMethod().getName();
-
-            Pair<List<org.nc0.prjcomp.ir.expr.Expression>, List<Command>> translation = translateExpressions(exp.getArgs());
-            assert translation != null;
-            List<Command> code = translation.snd();
-            List<org.nc0.prjcomp.ir.expr.Expression> arguments = translation.fst();
+        public Result visit(ExpCallMethod callExpression) {
+            String functionName = callExpression.getMethod().getName();
+            List<Result> results = callExpression.getArgs().stream().map(expression -> expression.accept(this)).toList();
+            List<Command> code = results.stream().flatMap(result -> result.getCode().stream()).collect(Collectors.toCollection(LinkedList::new));
+            List<org.nc0.prjcomp.ir.expr.Expression> arguments = results.stream().map(Result::getExp).collect(Collectors.toCollection(LinkedList::new));
             MethodSig signature = symbolTable.methodLookup(functionName);
-            if (signature == null)
+            if (signature == null) {
                 errors.add("Erreur interne, " + functionName + " pas dans la table");
-
-            List<org.nc0.prjcomp.ast.Type> argumentTypes = getArgumentTypes(exp.getArgs());
-            assert signature != null;
+            }
+            // List<org.nc0.prjcomp.ast.Type> argumentTypes = callExpression.getArgs().stream().map(argument -> argument.accept(typeChecker)).toList();
+            assert signature != null; // ?????? pr. forgot to return within if.
             org.nc0.prjcomp.ast.Type returnType = signature.returnType();
-
             Frame frame = frames.get(functionName);
             return makeFunCall(returnType, frame, arguments, code);
         }
 
-        //Pour compiler une liste d’expressions dans une seule paire (exp,code)
-        private Pair<List<org.nc0.prjcomp.ir.expr.Expression>, List<Command>> translateExpressions(List<Expression> exps) {
-            //TODO
-            return null;
-        }
-
-        //Pour récupérer la liste des types de la liste des paramètres
-        List<org.nc0.prjcomp.ast.Type> getArgumentTypes(List<Expression> args) {
-            return args.stream().map((a) -> a.accept(typeChecker)).collect(Collectors.toList());
-        }
-
-        //---EXPRESSIONS------
         @Override
-        public Result visit(ExpCons exp) {
-            //TODO
-            //Retourner un octet = à 1 pour true, 0 pour false.
-            return null;
+        public Result visit(ExpCons constantExpression) {
+            return new Result(switch (constantExpression.getConstant()) {
+                case TRUE -> new org.nc0.prjcomp.ir.expr.Byte((byte) 1);
+                case FALSE -> new org.nc0.prjcomp.ir.expr.Byte((byte) 0);
+            });
         }
 
         @Override
-        public Result visit(ExpId exp) {
-            //TODO Retourner une seule instruction, celle qui lit dans le
-            //registre associé à la variable.
-            return null;
+        public Result visit(ExpId idExpression) {
+            return new Result(new ReadReg(registerLookup(idExpression.getValue())));
         }
 
         @Override
-        public Result visit(ExpInt exp) {
-            //TODO
-            return null;
+        public Result visit(ExpInt integerExpression) {
+            return new Result(new Int(integerExpression.getValue()));
         }
 
         @Override
-        public Result visit(ExpUn exp) {
-            //TODO
-            return null;
+        public Result visit(ExpUn unaryExpression) {
+            Result expressionResult = unaryExpression.getExp().accept(this);
+            var unary = new Unary(expressionResult.getExp(), unaryExpression.getOp());
+            return new Result(unary, expressionResult.getCode());
         }
 
-        public Result visit(ExpRead e) {
+        public Result visit(ExpRead readExpression) {
             //création d’un frame pour la lecture, avec un nom qui sera rajouté
             //explicitement dans le code assembleur.
-            Frame frame = new Frame(Label.named("entryReadInt"), Label.named("exitReadInt"), new LinkedList<>(), new Register(org.nc0.prjcomp.ir.Type.INT));
+            Frame frame = new Frame(Label.named("entryReadInt"), Label.named("exitReadInt"), new LinkedList<>(), new Register(Type.INT));
             org.nc0.prjcomp.ast.Type type = new TypePrim(null, TypePrim.Prim.INT);
             List<Command> code = new LinkedList<>();
             List<org.nc0.prjcomp.ir.expr.Expression> args = new LinkedList<>();
             return makeFunCall(type, frame, args, code);
         }
 
+        private Result makeFunCall(org.nc0.prjcomp.ast.Type type, Frame frame, List<org.nc0.prjcomp.ir.expr.Expression> args, List<Command> code) {
+            assert currentFrame != null;
+            Register reg = new Register(Translate.ofType(type));
+            currentFrame.addLocal(reg);
+            code.add(new FunCall(reg, frame, args));
+            return new Result(new ReadReg(reg), code);
+        }
+
         //Classe interne : visiteur pour la constructions des Frames
-        private class FramesBuilder extends org.nc0.prjcomp.ast.BaseVisitor<Void> {
+        private class FramesBuilder extends BaseVisitor<Void> {
             FramesBuilder() {
                 super(null);
             }
@@ -327,7 +314,7 @@ public class Translate {
                 }
                 Frame frame;
                 org.nc0.prjcomp.ast.Type type = function.getType();
-                org.nc0.prjcomp.ir.Type irType = ofType(type);
+                Type irType = ofType(type);
                 frame = new Frame(Label.fresh(), Label.fresh(), parameters, new Register(irType));
 
                 frames.put(function.getId().getName(), frame);

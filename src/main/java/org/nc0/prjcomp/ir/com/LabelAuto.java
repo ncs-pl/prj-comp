@@ -3,7 +3,7 @@
 package org.nc0.prjcomp.ir.com;
 
 class LabelAuto extends Label {
-    private static int lastLabel;
+    private static int lastLabel = 0;
     final private int label;
 
     public LabelAuto() {

@@ -83,21 +83,6 @@ public class AstPrinter extends BaseVisitor<Void> {
         return null;
     }
 
-    public void indent() {
-        System.out.println();
-        for (int i = 0; i < indent; i++) {
-            print("   ");
-        }
-    }
-
-    private void print(String s) {
-        System.out.print(s);
-    }
-
-    public void end() {
-        print(";");
-    }
-
     public Void visit(StatReturn s) {
         indent();
         print("return " + s.getExpression().toString());
@@ -113,6 +98,21 @@ public class AstPrinter extends BaseVisitor<Void> {
         indent();
         System.out.print("}");
         return null;
+    }
+
+    public void end() {
+        print(";");
+    }
+
+    public void indent() {
+        System.out.println();
+        for (int i = 0; i < indent; i++) {
+            print("   ");
+        }
+    }
+
+    private void print(String s) {
+        System.out.print(s);
     }
 
 

@@ -3,7 +3,7 @@
 package org.nc0.prjcomp.ir;
 
 public class Register {
-    static private int lastRegister;
+    static private int lastRegister = 0;
     final private int id;
     final private Type type;
 

@@ -27,8 +27,8 @@ public class SymbolTable {
         return errors;
     }
 
-    public void addMethod(String nom, MethodSig ms) {
-        this.methods.put(nom, ms);
+    public void addMethod(String nom, MethodSig method) {
+        this.methods.put(nom, method);
     }
 
     public void addLocalVariable(Block block, String nom, Type type) {

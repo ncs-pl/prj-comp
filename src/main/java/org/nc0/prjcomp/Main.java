@@ -13,7 +13,6 @@ import org.nc0.prjcomp.ir.com.Label;
 import org.nc0.prjcomp.ir.translation.Translate;
 import org.nc0.prjcomp.parser.sdmLexer;
 import org.nc0.prjcomp.parser.sdmParser;
-import org.nc0.prjcomp.printers.AstPrinter;
 import org.nc0.prjcomp.printers.IrPrinter;
 import org.nc0.prjcomp.semantic.SymbolTable;
 import org.nc0.prjcomp.semantic.TableBuilder;
@@ -46,12 +45,8 @@ public class Main {
             System.exit(1);
         }
 
-        var astBuilder = new AstBuild();
-        Program ast = (Program) tree.accept(astBuilder);
-
-        var astPrinter = new AstPrinter();
-        ast.accept(astPrinter);
-        System.out.print("\n");
+        var ast = (Program) tree.accept(new AstBuild());
+        // ast.accept(new AstPrinter()); System.out.print("\n");
 
         // 4. Symbol table resolution
         var tableBuilder = new TableBuilder();
