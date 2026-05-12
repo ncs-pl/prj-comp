@@ -1,7 +1,7 @@
 grammar sdm; // software, data and methods
 
 @header {
-package org.nc0.prjcomp.parser;
+    package org.nc0.prjcomp.parser;
 }
 
 // Lexèmes
