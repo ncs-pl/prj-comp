@@ -5,233 +5,198 @@ package org.nc0.prjcomp.ast;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.nc0.prjcomp.parser.sdmBaseVisitor;
 import org.nc0.prjcomp.parser.sdmParser;
-import org.nc0.prjcomp.parser.sdmParser.ExpContext;
-import org.nc0.prjcomp.parser.sdmParser.FormalContext;
-import org.nc0.prjcomp.parser.sdmParser.StatementContext;
+import org.nc0.prjcomp.parser.sdmParser.*;
 import org.nc0.prjcomp.parser.sdmVisitor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class AstBuild extends sdmBaseVisitor<Node> implements sdmVisitor<Node> {
     @Override
-    public Node visitProgram(sdmParser.ProgramContext ctx) {
-        List<sdmParser.MethodDeclContext> listMetCont = ctx.methodDecl();
-        List<MethodDecl> metList = new ArrayList<>();
-        for (sdmParser.MethodDeclContext md : listMetCont) {
-            metList.add((MethodDecl) visit(md));
-        }
-        metList.add((MethodDecl) visit(ctx.mainMethod()));
-        return new Program(position(ctx), metList);
+    public Node visitProgram(ProgramContext context) {
+        var methods = Stream.concat(context.methodDecl().stream().map(method -> (MethodDecl) visit(method)), Stream.of((MethodDecl) visit(context.mainMethod()))).toList();
+        return new Program(position(context), methods);
     }
 
-    private static Position position(ParserRuleContext ctx) {
-        return new Position(ctx.start.getLine(), ctx.start.getCharPositionInLine());
+    private static Position position(ParserRuleContext context) {
+        return new Position(context.start.getLine(), context.start.getCharPositionInLine());
     }
 
     @Override
-    public Node visitMainMethod(sdmParser.MainMethodContext ctx) {
-        Position pos = position(ctx);
-        Statement i = new StatReturn(pos, new ExpInt(pos, 0));
-        List<Statement> sl = new ArrayList<>();
-        sl.add((Statement) ctx.statement().accept(this));
-        sl.add(i);
-        Statement sls = new StatList(pos, sl);
-        Block b = new Block(pos, sls);
-
-        return new MethodDecl(pos, new TypePrim(pos, TypePrim.Prim.INT), new Id(pos, "main"), new ArrayList<>(), b);
+    public Node visitMainMethod(sdmParser.MainMethodContext context) {
+        Position position = position(context);
+        Statement i = new StatReturn(position, new ExpInt(position, 0));
+        List<Statement> statements = new ArrayList<>();
+        statements.add((Statement) context.statement().accept(this));
+        statements.add(i);
+        Statement sls = new StatList(position, statements);
+        var type = new TypePrim(position, TypePrim.Prim.INT);
+        var id = new Id(position, "main");
+        var body = new Block(position, sls);
+        var formals = new ArrayList<Formal>();
+        return new MethodDecl(position, type, id, formals, body);
     }
 
     @Override
-    public Node visitMethodDecl(sdmParser.MethodDeclContext ctx) {
-        Type type = (Type) visit(ctx.type());
-        Id id = new Id(position(ctx), ctx.Id().getText());
-        StatementContext statContext = (ctx.statement());
-        Statement statement = (Statement) visit(statContext);
-        Block block = new Block(position(ctx), statement);
-
-        List<FormalContext> formalContextList = ctx.formal();
-        List<Formal> formalList = new ArrayList<>();
-        for (FormalContext fc : formalContextList) {
-            Formal f = (Formal) visit(fc);
-            formalList.add(f);
-        }
-
-        return new MethodDecl(position(ctx), type, id, formalList, block);
+    public Node visitMethodDecl(MethodDeclContext context) {
+        var type = (Type) visit(context.type());
+        var id = new Id(position(context), context.Id().getText());
+        var body = new Block(position(context), (Statement) visit(context.statement()));
+        List<Formal> formals = context.formal().stream().map(formal -> (Formal) visit(formal)).toList();
+        return new MethodDecl(position(context), type, id, formals, body);
     }
 
     @Override
-    public Node visitFormal(FormalContext ctx) {
-        Type type = (Type) visit(ctx.type());
-        Id id = new Id(position(ctx), ctx.Id().getText());
-
-        return new Formal(position(ctx), type, id);
+    public Node visitFormal(FormalContext context) {
+        var type = (Type) visit(context.type());
+        var id = new Id(position(context), context.Id().getText());
+        return new Formal(position(context), type, id);
     }
 
     @Override
-    public Node visitIntType(sdmParser.IntTypeContext ctx) {
-        return new TypePrim(position(ctx), TypePrim.Prim.INT);
+    public Node visitIntType(IntTypeContext context) {
+        return new TypePrim(position(context), TypePrim.Prim.INT);
     }
 
     @Override
-    public Node visitBoolType(sdmParser.BoolTypeContext ctx) {
-        return new TypePrim(position(ctx), TypePrim.Prim.BOOL);
+    public Node visitBoolType(BoolTypeContext context) {
+        return new TypePrim(position(context), TypePrim.Prim.BOOL);
     }
 
     @Override
-    public Node visitStatList(sdmParser.StatListContext ctx) {
-        List<StatementContext> listStat = ctx.statement();
-        List<Statement> statList = new ArrayList<>();
-        for (StatementContext stat : listStat) {
-            statList.add((Statement) visit(stat));
-        }
-        return new StatList(position(ctx), statList);
-
+    public Node visitStatList(StatListContext context) {
+        List<Statement> statements = context.statement().stream().map(statement -> (Statement) visit(statement)).toList();
+        return new StatList(position(context), statements);
     }
 
     @Override
-    public Node visitStatIf(sdmParser.StatIfContext ctx) {
-        Expression exp = (Expression) visit(ctx.exp());
-        Statement test = (Statement) visit(ctx.statement(0));
-        Block bTest = new Block(position(ctx), test);
-        Statement statElse = (Statement) visit(ctx.statement(1));
-        Block bElse = new Block(position(ctx), statElse);
-
-        return new StatIf(position(ctx), exp, bTest, bElse);
+    public Node visitStatIf(StatIfContext context) {
+        var expression = (Expression) visit(context.exp());
+        var branchTrue = new Block(position(context), (Statement) visit(context.statement(0)));
+        var branchFalse = new Block(position(context), (Statement) visit(context.statement(1)));
+        return new StatIf(position(context), expression, branchTrue, branchFalse);
     }
 
     @Override
-    public Node visitStatWhile(sdmParser.StatWhileContext ctx) {
-        Expression exp = (Expression) visit(ctx.exp());
-        Statement stat = (Statement) visit(ctx.statement());
-        Block b = new Block(position(ctx), stat);
-        return new StatWhile(position(ctx), exp, b);
+    public Node visitStatWhile(StatWhileContext context) {
+        var expression = (Expression) visit(context.exp());
+        var body = new Block(position(context), (Statement) visit(context.statement()));
+        return new StatWhile(position(context), expression, body);
     }
 
     @Override
-    public Node visitStatFor(sdmParser.StatForContext ctx) {
-        Position pos = position(ctx);
-        List<Statement> sList = new ArrayList<>();
-
-        Expression cond = (Expression) visit(ctx.exp());
-        Statement init = (Statement) visit(ctx.statement(0));
-        Statement action = (Statement) visit(ctx.statement(1));
-        Statement loop = (Statement) visit(ctx.statement(2));
-        List<Statement> whileBody = new ArrayList<>();
-        whileBody.add(loop);
+    public Node visitStatFor(StatForContext context) {
+        Position pos = position(context);
+        var statements = new ArrayList<Statement>();
+        var condition = (Expression) visit(context.exp());
+        var initialisation = (Statement) visit(context.statement(0));
+        var action = (Statement) visit(context.statement(1));
+        var body = (Statement) visit(context.statement(2));
+        var whileBody = new ArrayList<Statement>();
+        whileBody.add(body);
         whileBody.add(action);
-
-        Block block = new Block(pos, new StatList(pos, whileBody));
-        StatWhile sw = new StatWhile(pos, cond, block);
-        sList.add(init);
-        sList.add(sw);
-        return new StatList(position(ctx), sList);
+        var block = new Block(pos, new StatList(pos, whileBody));
+        var whileStatement = new StatWhile(pos, condition, block);
+        statements.add(initialisation);
+        statements.add(whileStatement);
+        return new StatList(position(context), statements);
     }
 
     @Override
-    public Node visitStatPrint(sdmParser.StatPrintContext ctx) {
-        Expression exp = (Expression) visit(ctx.exp());
-        return new StatPrint(position(ctx), exp);
+    public Node visitStatPrint(StatPrintContext context) {
+        var expression = (Expression) visit(context.exp());
+        return new StatPrint(position(context), expression);
     }
 
     @Override
-    public Node visitStatAff(sdmParser.StatAffContext ctx) {
-        Id id = new Id(position(ctx), ctx.Id().getText());
-        Expression e = (Expression) visit(ctx.exp());
-        return new StatAff(position(ctx), id, e);
+    public Node visitStatAff(StatAffContext context) {
+        var id = new Id(position(context), context.Id().getText());
+        return new StatAff(position(context), id, (Expression) visit(context.exp()));
     }
 
     @Override
-    public Node visitStatIncr(sdmParser.StatIncrContext ctx) {
-        Position pos = position(ctx);
-        Id id = new Id(pos, ctx.Id().getText());
-        ExpId ei = new ExpId(pos, ctx.Id().getText());
-        ExpBin e = new ExpBin(pos, ei, BinOp.ADD, new ExpInt(pos, 1));
-        return new StatAff(pos, id, e);
+    public Node visitStatIncr(StatIncrContext context) {
+        Position position = position(context);
+        var id = new Id(position, context.Id().getText());
+        var variable = new ExpId(position, context.Id().getText());
+        var one = new ExpInt(position, 1);
+        var expression = new ExpBin(position, variable, BinOp.ADD, one);
+        return new StatAff(position, id, expression);
     }
 
     @Override
-    public Node visitStatReturn(sdmParser.StatReturnContext ctx) {
-        Expression e = (Expression) visit(ctx.exp());
-        return new StatReturn(position(ctx), e);
+    public Node visitStatReturn(StatReturnContext context) {
+        var expression = (Expression) visit(context.exp());
+        return new StatReturn(position(context), expression);
     }
 
     @Override
-    public Node visitStatVarDecl(sdmParser.StatVarDeclContext ctx) {
-        Type t = (Type) visit(ctx.type());
-        Id id = new Id(position(ctx), ctx.Id().getText());
-        return new StatVarDecl(position(ctx), id, t);
+    public Node visitStatVarDecl(StatVarDeclContext context) {
+        var type = (Type) visit(context.type());
+        var id = new Id(position(context), context.Id().getText());
+        return new StatVarDecl(position(context), id, type);
     }
 
     @Override
-    public Node visitStatVarDeclAff(sdmParser.StatVarDeclAffContext ctx) {
-        List<Statement> sl = new ArrayList<>();
-        Expression e = (Expression) visit(ctx.exp());
-        Id id = new Id(position(ctx), ctx.Id().getText());
-        Type type = (Type) visit(ctx.type());
-        sl.add(new StatVarDecl(position(ctx), id, type));
-        sl.add(new StatAff(position(ctx), id, e));
-        return new StatList(position(ctx), sl);
+    public Node visitStatVarDeclAff(StatVarDeclAffContext context) {
+        var statements = new ArrayList<Statement>();
+        var expression = (Expression) visit(context.exp());
+        var id = new Id(position(context), context.Id().getText());
+        var type = (Type) visit(context.type());
+        statements.add(new StatVarDecl(position(context), id, type));
+        statements.add(new StatAff(position(context), id, expression));
+        return new StatList(position(context), statements);
     }
 
     @Override
-    public Node visitExUnop(sdmParser.ExUnopContext ctx) {
-        Expression exp = (Expression) visit(ctx.exp());
-        String unop = ctx.op.getText();
-        UnOp op = switch (unop) {
+    public Node visitExUnop(ExUnopContext context) {
+        var expression = (Expression) visit(context.exp());
+        var operator = switch (context.op.getText()) {
             case "!" -> UnOp.NOT;
             case "-" -> UnOp.MIN;
-            default -> throw new IllegalStateException("Unexpected value");
+            default -> throw new IllegalStateException("Unexpected unary operator expression");
         };
-        return new ExpUn(position(ctx), exp, op);
-    }
-
-    /**
-     * EXPRESSIONS
-     *
-     */
-    @Override
-    public Node visitExId(sdmParser.ExIdContext ctx) {
-        return new ExpId(position(ctx), ctx.Id().getText());
+        return new ExpUn(position(context), expression, operator);
     }
 
     @Override
-    public Node visitExRead(sdmParser.ExReadContext ctx) {
-        return new ExpRead(position(ctx));
+    public Node visitExId(ExIdContext context) {
+        return new ExpId(position(context), context.Id().getText());
     }
 
     @Override
-    public Node visitExFalse(sdmParser.ExFalseContext ctx) {
-        return new ExpCons(position(ctx), Constant.FALSE);
+    public Node visitExRead(ExReadContext context) {
+        return new ExpRead(position(context));
     }
 
     @Override
-    public Node visitExCall(sdmParser.ExCallContext ctx) {
-        Id method = new Id(position(ctx), ctx.Id().getText());
-        List<Expression> args = new ArrayList<>();
-        for (ExpContext ec : ctx.exp()) {
-            args.add((Expression) visit(ec));
-        }
-
-        return new ExpCallMethod(position(ctx), method, args);
+    public Node visitExFalse(ExFalseContext context) {
+        return new ExpCons(position(context), Constant.FALSE);
     }
 
     @Override
-    public Node visitExParenthesis(sdmParser.ExParenthesisContext ctx) {
-        return visit(ctx.exp());
+    public Node visitExCall(ExCallContext context) {
+        var method = new Id(position(context), context.Id().getText());
+        List<Expression> arguments = context.exp().stream().map(expression -> (Expression) visit(expression)).toList();
+        return new ExpCallMethod(position(context), method, arguments);
     }
 
     @Override
-    public Node visitExInt(sdmParser.ExIntContext ctx) {
-        return new ExpInt(position(ctx), Integer.parseInt(ctx.Int().getText()));
+    public Node visitExParenthesis(ExParenthesisContext context) {
+        return visit(context.exp());
     }
 
     @Override
-    public Node visitExBinop(sdmParser.ExBinopContext ctx) {
-        Expression exp1 = (Expression) visit(ctx.exp(0));
-        Expression exp2 = (Expression) visit(ctx.exp(1));
-        String binop = ctx.op.getText();
-        BinOp op = switch (binop) {
+    public Node visitExInt(ExIntContext context) {
+        return new ExpInt(position(context), Integer.parseInt(context.Int().getText()));
+    }
+
+    @Override
+    public Node visitExBinop(ExBinopContext context) {
+        var left = (Expression) visit(context.exp(0));
+        var right = (Expression) visit(context.exp(1));
+        var operator = switch (context.op.getText()) {
             case "+" -> BinOp.ADD;
             case "-" -> BinOp.MIN;
             case "*" -> BinOp.MULT;
@@ -244,15 +209,13 @@ public class AstBuild extends sdmBaseVisitor<Node> implements sdmVisitor<Node> {
             case "!=" -> BinOp.NEQ;
             case "||" -> BinOp.OR;
             case "/" -> BinOp.DIV;
-            default -> throw new IllegalStateException("Unexpected value");
+            default -> throw new IllegalStateException("Unexpected binary operator expression");
         };
-        return new ExpBin(position(ctx), exp1, op, exp2);
+        return new ExpBin(position(context), left, operator, right);
     }
 
     @Override
-    public Node visitExTrue(sdmParser.ExTrueContext ctx) {
-        return new ExpCons(position(ctx), Constant.TRUE);
+    public Node visitExTrue(ExTrueContext context) {
+        return new ExpCons(position(context), Constant.TRUE);
     }
-
-
 }
