@@ -1,3 +1,5 @@
+// Copyright (c) 2026.  All rights reserved.
+
 package org.nc0.prjcomp.semantic;
 
 import org.nc0.prjcomp.ast.*;
@@ -36,24 +38,6 @@ public class TableBuilder extends org.nc0.prjcomp.ast.BaseVisitor<Void> {
     }
 
     @Override
-    public Void visit(StatVarDecl vd) {
-        String id = vd.getId().getName();
-        Type type = vd.getType();
-        Type t = symbolTable.variableLookup(id, visitedBlocks);
-
-        if (t != null) {
-            errors.add(vd, " : variable " + id + " déjà déclarée en " + t.getPosition());
-        }
-        //Si on est dans un bloc :
-        if (visitedBlocks.getStack().isEmpty()) {
-            errors.add(vd, "erreur : pile des blocs vide");
-        }
-        symbolTable.addLocalVariable(visitedBlocks.current(), id, type);
-
-        return null;
-    }
-
-    @Override
     public Void visit(MethodDecl md) {
         Block b = md.getBlock();
         List<Formal> lf = md.getFormal();
@@ -72,6 +56,24 @@ public class TableBuilder extends org.nc0.prjcomp.ast.BaseVisitor<Void> {
         }
         super.visit(b);
         visitedBlocks.exit();
+        return null;
+    }
+
+    @Override
+    public Void visit(StatVarDecl vd) {
+        String id = vd.getId().getName();
+        Type type = vd.getType();
+        Type t = symbolTable.variableLookup(id, visitedBlocks);
+
+        if (t != null) {
+            errors.add(vd, " : variable " + id + " déjà déclarée en " + t.getPosition());
+        }
+        //Si on est dans un bloc :
+        if (visitedBlocks.getStack().isEmpty()) {
+            errors.add(vd, "erreur : pile des blocs vide");
+        }
+        symbolTable.addLocalVariable(visitedBlocks.current(), id, type);
+
         return null;
     }
 

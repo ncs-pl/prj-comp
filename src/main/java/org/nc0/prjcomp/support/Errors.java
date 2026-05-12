@@ -1,3 +1,5 @@
+// Copyright (c) 2026.  All rights reserved.
+
 package org.nc0.prjcomp.support;
 
 import org.nc0.prjcomp.ast.Node;

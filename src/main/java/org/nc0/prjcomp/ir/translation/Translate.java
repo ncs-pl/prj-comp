@@ -1,3 +1,5 @@
+// Copyright (c) 2026.  All rights reserved.
+
 package org.nc0.prjcomp.ir.translation;
 
 import org.nc0.prjcomp.ast.*;
@@ -114,29 +116,6 @@ public class Translate {
         }
 
         @Override
-        public Result visit(StatVarDecl stm) {
-            // Declaration de variable : nouveau registre
-            // TODO :
-            // 	-Créer un registre (avec le bon type)
-            // 	-Récupérer le bloc actuel (celui déterminé par le typeChecker
-            //	-Mettre l’id et le registre dans la map 'varToReg'
-            //	-Ajouter le registre au frame courant.
-            //	-Retourner un code vide.
-            return null;
-        }
-
-        @Override
-        public Result visit(StatReturn stm) {
-            //compiler l’expression, récupérer le registre de retour du
-            //frame courant, puis produire le code qui :
-            //  - permet de calculer l’expression
-            //  - écrit cette expression dans le registre de retour
-            //  - saute au point de sortie du frame courant
-            //  TODO
-            return null;
-        }
-
-        @Override
         public Result visit(MethodDecl md) {
             //TODO
             //-Récupérer le frame associé à la méthode,
@@ -183,9 +162,6 @@ public class Translate {
             return new Result(code);
         }
 
-
-        //-------INSTRUCTIONS--------
-
         @Override
         public Result visit(StatPrint s) {
             Expression e = s.getExpression();
@@ -210,9 +186,35 @@ public class Translate {
             return new Result(new ReadReg(reg), code);
         }
 
+
+        //-------INSTRUCTIONS--------
+
         @Override
         public Result visit(StatWhile stm) {
             //TODO
+            return null;
+        }
+
+        @Override
+        public Result visit(StatVarDecl stm) {
+            // Declaration de variable : nouveau registre
+            // TODO :
+            // 	-Créer un registre (avec le bon type)
+            // 	-Récupérer le bloc actuel (celui déterminé par le typeChecker
+            //	-Mettre l’id et le registre dans la map 'varToReg'
+            //	-Ajouter le registre au frame courant.
+            //	-Retourner un code vide.
+            return null;
+        }
+
+        @Override
+        public Result visit(StatReturn stm) {
+            //compiler l’expression, récupérer le registre de retour du
+            //frame courant, puis produire le code qui :
+            //  - permet de calculer l’expression
+            //  - écrit cette expression dans le registre de retour
+            //  - saute au point de sortie du frame courant
+            //  TODO
             return null;
         }
 
@@ -229,25 +231,9 @@ public class Translate {
         }
 
         @Override
-        public Result visit(ExpUn exp) {
-            //TODO
-            return null;
-        }
-
-        @Override
         public Result visit(ExpBin exp) {
             //TODO
             return null;
-        }
-
-        public Result visit(ExpRead e) {
-            //création d’un frame pour la lecture, avec un nom qui sera rajouté
-            //explicitement dans le code assembleur.
-            Frame frame = new Frame(Label.named("entryReadInt"), Label.named("exitReadInt"), new LinkedList<>(), new Register(org.nc0.prjcomp.ir.Type.INT));
-            org.nc0.prjcomp.ast.Type type = new TypePrim(null, TypePrim.Prim.INT);
-            List<Command> code = new LinkedList<>();
-            List<org.nc0.prjcomp.ir.expr.Expression> args = new LinkedList<>();
-            return makeFunCall(type, frame, args, code);
         }
 
         @Override
@@ -300,6 +286,22 @@ public class Translate {
         public Result visit(ExpInt exp) {
             //TODO
             return null;
+        }
+
+        @Override
+        public Result visit(ExpUn exp) {
+            //TODO
+            return null;
+        }
+
+        public Result visit(ExpRead e) {
+            //création d’un frame pour la lecture, avec un nom qui sera rajouté
+            //explicitement dans le code assembleur.
+            Frame frame = new Frame(Label.named("entryReadInt"), Label.named("exitReadInt"), new LinkedList<>(), new Register(org.nc0.prjcomp.ir.Type.INT));
+            org.nc0.prjcomp.ast.Type type = new TypePrim(null, TypePrim.Prim.INT);
+            List<Command> code = new LinkedList<>();
+            List<org.nc0.prjcomp.ir.expr.Expression> args = new LinkedList<>();
+            return makeFunCall(type, frame, args, code);
         }
 
         //Classe interne : visiteur pour la constructions des Frames

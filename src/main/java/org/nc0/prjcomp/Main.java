@@ -1,6 +1,7 @@
+// Copyright (c) 2026.  All rights reserved.
+
 package org.nc0.prjcomp;
 
-import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -13,6 +14,7 @@ import org.nc0.prjcomp.ir.translation.Translate;
 import org.nc0.prjcomp.parser.sdmLexer;
 import org.nc0.prjcomp.parser.sdmParser;
 import org.nc0.prjcomp.printers.AstPrinter;
+import org.nc0.prjcomp.printers.IrPrinter;
 import org.nc0.prjcomp.semantic.SymbolTable;
 import org.nc0.prjcomp.semantic.TableBuilder;
 import org.nc0.prjcomp.semantic.TypeChecker;
@@ -20,7 +22,6 @@ import org.nc0.prjcomp.support.Errors;
 import org.nc0.prjcomp.support.Pair;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
@@ -28,62 +29,54 @@ import java.util.List;
 
 
 public class Main {
-
     public static void main(String[] args) throws IOException {
+        // 1. Read input parameters
+        var input = CharStreams.fromStream(System.in);
+        // TODO(nico): ensure there are some parameters
 
-        System.out.println("---- Analyse Syntaxique -----");
-        InputStream inputStream = System.in;
-        ParseTree tree = parse(inputStream);
+        // 2. Lexing
+        var lexer = new sdmLexer(input);
+        var tokens = new CommonTokenStream(lexer);
 
-        System.out.println("---- Construction AST -----");
-        AstBuild astB = new AstBuild();
-        Program ast = (Program) tree.accept(astB);
-
-        System.out.println("---- Affichage AST -----");
-        AstPrinter printer = new AstPrinter();
-        ast.accept(printer);
-        System.out.print("\n");
-
-
-        System.out.println("\n---- Construction Table -----\n");
-        TableBuilder tb = new TableBuilder();
-        ast.accept(tb);
-        SymbolTable st = tb.getTable();
-        System.out.println("\n---- Vérif de Types -----\n");
-        TypeChecker tc = new TypeChecker(st);
-        ast.accept(tc);
-        tc.check();
-
-        System.out.println("\n--- Traduction en code intermédiaire ---\n");
-
-        Pair<Label, List<Pair<Frame, List<Command>>>> irCode = Translate.run(st, ast);
-
-        //IrPrinter ip = new IrPrinter();
-        //ip.print(irCode);
-
-
-        System.out.println("\n--- Traduction en assembleur ---\n");
-
-        String name = "out.asm";
-        if (args.length == 1) {
-            name = args[0];
-        }
-
-        Path path = FileSystems.getDefault().getPath(name);
-        compile(path, irCode.fst(), irCode.snd());
-    }
-
-    private static ParseTree parse(InputStream inputStream) throws IOException {
-        CharStream input = CharStreams.fromStream(inputStream);
-        sdmLexer lexer = new sdmLexer(input);
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        sdmParser parser = new sdmParser(tokens);
+        // 3. Parsing
+        var parser = new sdmParser(tokens);
         ParseTree tree = parser.program();
         if (parser.getNumberOfSyntaxErrors() != 0) {
             System.out.println("erreur de syntaxe : sortie après analyse syntaxique");
             System.exit(1);
         }
-        return tree;
+
+        var astBuilder = new AstBuild();
+        Program ast = (Program) tree.accept(astBuilder);
+
+        var astPrinter = new AstPrinter();
+        ast.accept(astPrinter);
+        System.out.print("\n");
+
+        // 4. Symbol table resolution
+        var tableBuilder = new TableBuilder();
+        ast.accept(tableBuilder);
+        SymbolTable symbols = tableBuilder.getTable();
+
+        // 5. Type checking
+        var typeChecker = new TypeChecker(symbols);
+        ast.accept(typeChecker);
+        typeChecker.check();
+
+        // 6. IR lowering
+        Pair<Label, List<Pair<Frame, List<Command>>>> ir = Translate.run(symbols, ast);
+        Label main = ir.fst();
+        List<Pair<Frame, List<Command>>> fragments = ir.snd();
+        var irPrinter = new IrPrinter();
+        irPrinter.print(ir);
+
+        // 7. Assembly code generation
+        String name = "out.asm";
+        if (args.length == 1) {
+            name = args[0];
+        }
+        Path path = FileSystems.getDefault().getPath(name);
+        compile(path, main, fragments);
     }
 
     public static void compile(Path path, Label mainLabel, List<Pair<Frame, List<Command>>> fragments) {
@@ -110,6 +103,4 @@ public class Main {
         }
         return path;
     }
-
-
 }

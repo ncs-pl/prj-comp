@@ -1,6 +1,8 @@
 grammar sdm; // software, data and methods
 
 @header {
+// Copyright (c) 2026.  All rights reserved.
+
 package org.nc0.prjcomp.parser;
 }
 

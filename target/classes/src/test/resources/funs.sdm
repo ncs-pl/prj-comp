@@ -3,7 +3,7 @@ int fact(int x){
 	else return fact(x-1)*x;
 }
 
-org.nc0.prjcomp.main(){
+main(){
 	boolean b = true;
 	if(b) print(fact(5));
 	else print(1);

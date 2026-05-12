@@ -1,3 +1,5 @@
+// Copyright (c) 2026.  All rights reserved.
+
 package org.nc0.prjcomp.semantic;
 
 import org.nc0.prjcomp.ast.*;
@@ -44,13 +46,6 @@ public class TypeChecker extends BaseVisitor<Type> {
         }
     }
 
-    public Type visit(StatVarDecl s) {
-        checkReach(s);
-        return super.visit(s);
-    }
-
-    // Feuilles
-
     public Type visit(Id i) {
         Type t = table.variableLookup(i.getName(), visitedBlocks);
         if (t == null) {
@@ -62,12 +57,7 @@ public class TypeChecker extends BaseVisitor<Type> {
 
     }
 
-    public Type visit(StatReturn sr) {
-        checkReach(sr);
-        Type t = sr.getExpression().accept(this);
-        this.typeRetour = t;
-        return statType;
-    }
+    // Feuilles
 
     public Type visit(MethodDecl md) {
         //on initialise la recherche du type retourné.
@@ -169,34 +159,23 @@ public class TypeChecker extends BaseVisitor<Type> {
         return s.getBlock().accept(this);
     }
 
+    public Type visit(StatVarDecl s) {
+        checkReach(s);
+        return super.visit(s);
+    }
+
+    public Type visit(StatReturn sr) {
+        checkReach(sr);
+        Type t = sr.getExpression().accept(this);
+        this.typeRetour = t;
+        return statType;
+    }
+
     public Type visit(Block b) {
         checkReach(b);
         visitedBlocks.enter(b);
         Type t = super.visit(b);
         visitedBlocks.exit();
-        return t;
-    }
-
-    public Type visit(ExpUn exp) {
-        Type t = exp.getExp().accept(this);
-        Position pos = exp.getPosition();
-        if (t == null || t.equals(errType)) {
-            return errType;
-        }
-        String name = t.toString();
-        UnOp op = exp.getOp();
-        switch (op) {
-            case NOT:
-                if (name.equals("bool")) {
-                    t = new TypePrim(pos, TypePrim.Prim.BOOL);
-                } else {
-                    errors.add(exp, "exp. de type bool attendue pour l’opération " + op + " (trouvé : " + t + ")");
-                    t = errType;
-                }
-
-                break;
-        }
-
         return t;
     }
 
@@ -237,10 +216,6 @@ public class TypeChecker extends BaseVisitor<Type> {
                 break;
         }
         return t;
-    }
-
-    public Type visit(ExpRead e) {
-        return new TypePrim(e.getPosition(), TypePrim.Prim.INT);
     }
 
     public Type visit(ExpCallMethod ec) {
@@ -298,6 +273,33 @@ public class TypeChecker extends BaseVisitor<Type> {
     }
 
     public Type visit(ExpInt e) {
+        return new TypePrim(e.getPosition(), TypePrim.Prim.INT);
+    }
+
+    public Type visit(ExpUn exp) {
+        Type t = exp.getExp().accept(this);
+        Position pos = exp.getPosition();
+        if (t == null || t.equals(errType)) {
+            return errType;
+        }
+        String name = t.toString();
+        UnOp op = exp.getOp();
+        switch (op) {
+            case NOT:
+                if (name.equals("bool")) {
+                    t = new TypePrim(pos, TypePrim.Prim.BOOL);
+                } else {
+                    errors.add(exp, "exp. de type bool attendue pour l’opération " + op + " (trouvé : " + t + ")");
+                    t = errType;
+                }
+
+                break;
+        }
+
+        return t;
+    }
+
+    public Type visit(ExpRead e) {
         return new TypePrim(e.getPosition(), TypePrim.Prim.INT);
     }
 

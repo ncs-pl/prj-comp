@@ -1,3 +1,5 @@
+// Copyright (c) 2026.  All rights reserved.
+
 package org.nc0.prjcomp.printers;
 
 import org.nc0.prjcomp.ast.*;
@@ -12,39 +14,8 @@ public class AstPrinter extends BaseVisitor<Void> {
         indent = 0;
     }
 
-    public Void visit(StatVarDecl v) {
-        indent();
-        print(v.getType().toString());
-        print(" ");
-        print(v.getId().toString());
-        end();
-        return null;
-    }
-
-    public void indent() {
-        System.out.println();
-        for (int i = 0; i < indent; i++) {
-            print("   ");
-        }
-    }
-
-    private void print(String s) {
-        System.out.print(s);
-    }
-
-    public void end() {
-        print(";");
-    }
-
     public Void visit(Formal f) {
         print(f.getType().toString() + " " + f.getId().toString());
-        return null;
-    }
-
-    public Void visit(StatReturn s) {
-        indent();
-        print("return " + s.getExpression().toString());
-        end();
         return null;
     }
 
@@ -100,6 +71,37 @@ public class AstPrinter extends BaseVisitor<Void> {
         indent();
         print("while(" + e.toString() + ")");
         b.accept(this);
+        return null;
+    }
+
+    public Void visit(StatVarDecl v) {
+        indent();
+        print(v.getType().toString());
+        print(" ");
+        print(v.getId().toString());
+        end();
+        return null;
+    }
+
+    public void indent() {
+        System.out.println();
+        for (int i = 0; i < indent; i++) {
+            print("   ");
+        }
+    }
+
+    private void print(String s) {
+        System.out.print(s);
+    }
+
+    public void end() {
+        print(";");
+    }
+
+    public Void visit(StatReturn s) {
+        indent();
+        print("return " + s.getExpression().toString());
+        end();
         return null;
     }
 
