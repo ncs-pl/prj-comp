@@ -13,6 +13,7 @@ import org.nc0.prjcomp.ir.com.Label;
 import org.nc0.prjcomp.ir.translation.Translate;
 import org.nc0.prjcomp.parser.sdmLexer;
 import org.nc0.prjcomp.parser.sdmParser;
+import org.nc0.prjcomp.printers.AstPrinter;
 import org.nc0.prjcomp.printers.IrPrinter;
 import org.nc0.prjcomp.semantic.SymbolTable;
 import org.nc0.prjcomp.semantic.TableBuilder;
@@ -26,7 +27,6 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.List;
 
-
 public class Main {
     public static void main(String[] args) throws IOException {
         // 1. Read input parameters
@@ -34,10 +34,12 @@ public class Main {
         // TODO(nico): ensure there are some parameters
 
         // 2. Lexing
+        System.out.println("--- Lexing ---");
         var lexer = new sdmLexer(input);
         var tokens = new CommonTokenStream(lexer);
 
         // 3. Parsing
+        System.out.println("--- Parsing ---");
         var parser = new sdmParser(tokens);
         ParseTree tree = parser.program();
         if (parser.getNumberOfSyntaxErrors() != 0) {
@@ -46,19 +48,23 @@ public class Main {
         }
 
         var ast = (Program) tree.accept(new AstBuild());
-        // ast.accept(new AstPrinter()); System.out.print("\n");
+        ast.accept(new AstPrinter());
+        System.out.print("\n");
 
         // 4. Symbol table resolution
+        System.out.println("--- Symbol resolution ---");
         var tableBuilder = new TableBuilder();
         ast.accept(tableBuilder);
         SymbolTable symbols = tableBuilder.getTable();
 
         // 5. Type checking
+        System.out.println("--- Type checking ---");
         var typeChecker = new TypeChecker(symbols);
         ast.accept(typeChecker);
         typeChecker.check();
 
         // 6. IR lowering
+        System.out.println("--- Lowering ---");
         Pair<Label, List<Pair<Frame, List<Command>>>> ir = Translate.run(symbols, ast);
         Label main = ir.fst();
         List<Pair<Frame, List<Command>>> fragments = ir.snd();
@@ -66,6 +72,7 @@ public class Main {
         irPrinter.print(ir);
 
         // 7. Assembly code generation
+        System.out.println("--- Code generating ---");
         String name = "out.asm";
         if (args.length == 1) {
             name = args[0];

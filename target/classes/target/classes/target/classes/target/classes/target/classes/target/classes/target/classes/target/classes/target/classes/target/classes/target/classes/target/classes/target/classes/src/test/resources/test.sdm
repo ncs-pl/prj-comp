@@ -1,0 +1,9 @@
+int f(int y){
+	return (-y);
+}
+
+org.nc0.prjcomp.main(){
+	int x =10;
+	print(0-1);
+	print(f(x));
+}
