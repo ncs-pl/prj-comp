@@ -1,6 +1,6 @@
 
-entryReadInt:
+_read_int_ENTRY:
 	li $v0, 5
 	syscall
-exitReadInt:
+_read_int_EXIT:
 	j $ra

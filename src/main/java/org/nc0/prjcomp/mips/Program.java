@@ -2,99 +2,79 @@
 
 package org.nc0.prjcomp.mips;
 
-import org.nc0.prjcomp.ir.Frame;
 import org.nc0.prjcomp.ir.com.Command;
 import org.nc0.prjcomp.ir.com.Label;
 import org.nc0.prjcomp.support.Errors;
 import org.nc0.prjcomp.support.Pair;
 
-import java.io.*;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 
 public class Program {
-
     public static final Errors errors = new Errors();
     static final int DEFAULT_SIZE = 4;
 
-    static public void generate(Path path, Label mainLabel, List<Pair<Frame, List<Command>>> fragments) {
-        try {
-            AsmWriter output = new AsmWriter(path);
-            mipsTextGeneration(output, mainLabel);
-            framesGeneration(output, fragments);
-            supportGeneration(output);
-            output.close();
-        } catch (FileNotFoundException e) {
-            errors.add(null, "File not found: " + path);
-        }
-    }
+    static public List<String> generate(Label mainLabel, List<Pair<org.nc0.prjcomp.ir.Frame, List<Command>>> fragments) {
+        var assembly = new LinkedList<String>();
+        var generator = new Frame(errors);
 
-    static private void mipsTextGeneration(AsmWriter output, Label mainLabel) {
-        List<String> asmCode = new LinkedList<>();
-        asmCode.add(Asm.directive("data"));
-        asmCode.add(Asm.label("buffer"));
-        asmCode.add(Asm.directive("asciiz \"  \""));
-        asmCode.add(Asm.directive("text"));
-        asmCode.add(Asm.label("main"));
-        asmCode.add(Asm.command("jal " + mainLabel));
-        asmCode.addAll(Asm.exit());
-        output.writeAllLines(asmCode);
-    }
+        // Object file
+        assembly.add(Asm.directive("data"));
+        assembly.add(Asm.label("buffer"));
+        assembly.add(Asm.directive("asciiz \"  \""));
+        assembly.add(Asm.directive("text"));
+        assembly.add(Asm.label("main"));
+        assembly.add(Asm.command("jal " + mainLabel));
+        assembly.addAll(Asm.exit());
 
-    static public void framesGeneration(AsmWriter output, List<Pair<Frame, List<Command>>> fragments) {
-        org.nc0.prjcomp.mips.Frame frameGenerator = new org.nc0.prjcomp.mips.Frame(errors);
-        for (Pair<Frame, List<Command>> fragment : fragments)
-            output.writeAllLines(frameGenerator.generate(fragment));
-    }
-
-    static private void supportGeneration(AsmWriter output) {
-        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        try {
-            URL url = classLoader.getResource("src/main/resources/list.txt");
-            if (url == null) {
-                errors.add(null, "Resources list cannot be found");
-            } else {
-                List<String> files = Files.readAllLines(Paths.get(url.toURI()));
-                BufferedReader in;
-                for (String file : files) {
-                    InputStream stream = classLoader.getResourceAsStream(file);
-                    if (stream == null)
-                        errors.add(null, "Resources file " + file + " cannot be opened");
-                    else {
-                        in = new BufferedReader(new InputStreamReader(stream));
-                        output.transferFrom(in);
-                        in.close();
-                    }
-                }
-            }
-        } catch (URISyntaxException | IOException e) {
-            errors.add(null, "Error while reading resources");
-        }
-    }
-
-    public static class AsmWriter extends PrintWriter {
-
-        AsmWriter(Path path) throws FileNotFoundException {
-            super(new OutputStreamWriter(new FileOutputStream(path.toFile())));
+        // Frames generation
+        for (var fragment : fragments) {
+            assembly.addAll(generator.generate(fragment));
         }
 
-        void transferFrom(BufferedReader in) {
-            try {
-                while (in.ready())
-                    println(in.readLine());
-            } catch (IOException e) {
-                errors.add(null, "Transferring resources");
-            }
-        }
+        // Runtime
+        // TODO(nico): use Asm module.
+        assembly.add("");
+        assembly.add("_print_bool_ENTRY:");
+        assembly.add("\tbne $a0, 0, _print_bool_true");
+        assembly.add("\tj _print_bool_false");
+        assembly.add("_print_bool_true:");
+        assembly.add("\tli $a0, 84");
+        assembly.add("\tli $v0, 11");
+        assembly.add("\tsyscall");
+        assembly.add("\tj _print_bool_EXIT");
+        assembly.add("_print_bool_false:");
+        assembly.add("\tli $a0, 70");
+        assembly.add("\tli $v0, 11");
+        assembly.add("\tsyscall");
+        assembly.add("_print_bool_EXIT:");
+        assembly.add("\tj $ra");
 
-        void writeAllLines(List<String> lines) {
-            for (String line : lines)
-                println(line);
-        }
+        assembly.add("");
+        assembly.add("_print_int_ENTRY:");
+        assembly.add("\tli $v0, 1");
+        assembly.add("\tsyscall");
+        assembly.add("_print_int_EXIT:");
+        assembly.add("\tj $ra");
+
+        assembly.add("");
+        assembly.add("_read_bool_ENTRY:");
+        assembly.add("\tla $a0, buffer");
+        assembly.add("\tli $a1, 3");
+        assembly.add("\tli $v0, 8");
+        assembly.add("\tsyscall");
+        assembly.add("\tlb $v0, buffer");
+        assembly.add("\tli $t1, 84");
+        assembly.add("\tseq $v0, $v0, $t1");
+        assembly.add("_read_bool_EXIT:");
+        assembly.add("\tj $ra");
+
+        assembly.add("");
+        assembly.add("_read_int_ENTRY:");
+        assembly.add("\tli $v0, 5");
+        assembly.add("\tsyscall");
+        assembly.add("_read_int_EXIT:");
+        assembly.add("\tj $ra");
+        return assembly;
     }
 }

@@ -160,8 +160,8 @@ public class Translate {
         public Result visit(StatPrint printStatement) {
             assert currentFrame != null;
             Result expressionResult = printStatement.getExpression().accept(this);
-            Label entryPoint = Label.named("print_entry");
-            Label exitPoint = Label.named("print_exit");
+            Label entryPoint = Label.named("_print_ENTRY");
+            Label exitPoint = Label.named("_print_EXIT");
             var parameters = new ArrayList<Register>();
             parameters.add(new Register(Type.INT)); // input
             var output = new Register(Type.INT); // NOTE(nico): all functions must return something...
@@ -276,10 +276,10 @@ public class Translate {
         public Result visit(ExpRead readExpression) {
             //création d’un frame pour la lecture, avec un nom qui sera rajouté
             //explicitement dans le code assembleur.
-            Frame frame = new Frame(Label.named("entryReadInt"), Label.named("exitReadInt"), new LinkedList<>(), new Register(Type.INT));
-            org.nc0.prjcomp.ast.Type type = new TypePrim(null, TypePrim.Prim.INT);
-            List<Command> code = new LinkedList<>();
-            List<org.nc0.prjcomp.ir.expr.Expression> args = new LinkedList<>();
+            var frame = new Frame(Label.named("_read_ENTRY"), Label.named("_read_EXIT"), new LinkedList<>(), new Register(Type.INT));
+            var type = new TypePrim(null, TypePrim.Prim.INT);
+            var code = new LinkedList<Command>();
+            var args = new LinkedList<org.nc0.prjcomp.ir.expr.Expression>();
             return makeFunCall(type, frame, args, code);
         }
 

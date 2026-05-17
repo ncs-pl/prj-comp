@@ -32,6 +32,7 @@ public class Asm {
         return asmCode;
     }
 
+    @SuppressWarnings("SameParameterValue")
     static List<String> push(String register) {
         List<String> asmCode = ListTools.mklist(command("sub $sp, 4"));
         asmCode.add(command("sw " + register + ", 4($sp)"));
@@ -45,11 +46,10 @@ public class Asm {
     }
 
     public static String save(int size) {
-        String op = "s";
         return switch (size) {
-            case 1 -> op + "b";
-            case 2 -> op + "h";
-            default -> op + "w";
+            case 1 -> "sb";
+            case 2 -> "sh"; // NOTE(nico): ??
+            default -> "sw";
         };
     }
 }

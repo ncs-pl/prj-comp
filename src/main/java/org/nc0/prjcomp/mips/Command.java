@@ -5,8 +5,8 @@ package org.nc0.prjcomp.mips;
 import org.nc0.prjcomp.ir.Register;
 import org.nc0.prjcomp.ir.com.*;
 import org.nc0.prjcomp.support.Errors;
-import org.nc0.prjcomp.support.ListTools;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -21,74 +21,69 @@ public class Command implements Visitor<List<String>> {
     }
 
     @Override
-    public List<String> visit(Label com) {
-        return ListTools.mklist(Asm.label(com.toString()));
+    public List<String> visit(Label label) {
+        return new LinkedList<>(Collections.singleton(Asm.label(label.toString()))); // label
     }
 
     @Override
-    public List<String> visit(WriteReg com) {
-        //On compile l’expression à écrire. Puis on dépile dans un registre.
-        //On récupère le décalage du registre à écrire, puis on écrit  à
-        //cette adresse la valeur dépilée.
-        List<String> asmCode = new LinkedList<>();
-        //TODO
-        return asmCode;
+    public List<String> visit(WriteReg write) {
+        List<String> expressionAssembly = write.getExp().accept(exprVisitor);
+        Register register = write.getReg();
+        int offset = regAlloc.get(register);
+        var operation = Asm.save(Asm.sizeOf(register.getType()));
+        var assembly = new LinkedList<>(expressionAssembly); // evaluate expression
+        assembly.addAll(Asm.pop("$t0")); // pop from the stack
+        assembly.add(Asm.command(operation + "$t0, " + offset + "($fp)")); // write to memory
+        return assembly;
     }
 
     @Override
-    public List<String> visit(CJump com) {
-        //Saut conditionnel : si l’expression s’évalue à zero, on saute au
-        //label "faux", sinon au label "vrai".
-        //(Les noms des labels sont ceux de l’org.nc0.prjcomp.ir).
-        List<String> asmCode = com.getCondition().accept(exprVisitor);
-        //TODO
-        //
-        return asmCode;
+    public List<String> visit(CJump conditionalJump) {
+        List<String> expressionAssembly = conditionalJump.getCondition().accept(exprVisitor);
+        var assembly = new LinkedList<>(expressionAssembly); // evaluate expression
+        assembly.addAll(Asm.pop("$t0")); // pop from the stack
+        assembly.add(Asm.command("beq $zero, $t0, " + conditionalJump.getFalseLabel())); // test expression + else
+        assembly.add(Asm.command("j " + conditionalJump.getTrueLabel())); // then
+        return assembly;
     }
 
     @Override
-    public List<String> visit(Jump com) {
-        //Saut non conditionnel au Label adapté.
-        return ListTools.mklist(Asm.command("j " + com.getGotoLabel()));
+    public List<String> visit(Jump jump) {
+        return new LinkedList<>(Collections.singleton(Asm.command("j " + jump.getGotoLabel()))); // jump
     }
 
     @Override
-    public List<String> visit(FunCall com) {
+    public List<String> visit(FunCall functionCall) {
         //On fait le passage d’arguments.
         //Ensuite on saute au point d’entrée de la fonction en sauvegardant
         //l’adresse de l’instruction suivante dans $ra.
         //
-        //On récupère le décalage associé a registre de l’instruction com.
+        //On récupère le décalage associé a registre de l’instruction functionCall.
         //On stocke v0 à cette adresse (Pour rappel, en MIPS, c’est le registre dédié
         //au retour des fonctions)
-        List<String> asmCode = passArguments(com.getArguments());
-        //TODO…
-        return asmCode;
-    }
+        Register register = functionCall.getRegister();
+        int registerSize = Asm.sizeOf(register.getType());
+        org.nc0.prjcomp.ir.Frame frame = functionCall.getFrame();
+        int offset = regAlloc.get(register);
+        String op = Asm.save(registerSize);
+        var arguments = functionCall.getArguments();
+        assert arguments.size() <= 4; // NOTE(nico): see Frame.java
 
-    private List<String> passArguments(List<org.nc0.prjcomp.ir.expr.Expression> exps) {
-        //Cette fonction prend une liste d’expressions (on supposera qu’il n’y
-        //en a pas plus de 4 par construction), puis les compile avec le
-        //visiteur exprVisitor (org.nc0.prjcomp.mips.Expression) en une suite d’instructions.
-        //On suppose que le code généré par la visite de chaque expression
-        //stocke le résultat sur le sommet de la pile (dans un TP précédent, on
-        //faisait le même type d’hypothèse avec v0 par exemple).
 
-        //Pour chacune de ces expressions, on fait en sorte que son résultat
-        //soit stocké le registre adapté (après avoir compilé la première, on
-        //dépile dans a0, etc…).
-
-        //n.b: Asm.pop(reg) stocke le sommet de sp dans reg.
-
-        List<String> asmCode = new LinkedList<>();
-        List<String> popAndCopy = new LinkedList<>();
-        int counter = exps.size() - 1;
-        for (org.nc0.prjcomp.ir.expr.Expression exp : exps) {
-            asmCode.addAll(exp.accept(exprVisitor));
-            popAndCopy.addAll(Asm.pop("$a" + counter));
+        // Pop function parameters (limited to four) from the stack
+        var assembly = new LinkedList<String>();
+        var pops = new LinkedList<String>();
+        int counter = arguments.size() - 1;
+        for (var argument : arguments) {
+            assembly.addAll(argument.accept(exprVisitor)); // evaluate argument's expression
+            pops.addAll(Asm.pop("$a" + counter)); // pop from the stack into argument register
             counter -= 1;
         }
-        asmCode.addAll(popAndCopy);
-        return asmCode;
+        assembly.addAll(pops);
+
+        // Procedural call
+        assembly.add(Asm.command("jal " + frame.getEntryPoint().toString())); // jump to procedure while saving return address
+        assembly.add(Asm.command(op + " $v0, " + offset + "($fp)")); // NOTE(nico): c.f. the end of the calling convention defined within Frame.java
+        return assembly;
     }
 }

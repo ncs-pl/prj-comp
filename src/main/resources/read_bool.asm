@@ -1,5 +1,5 @@
 
-entryReadBool:
+_read_bool_ENTRY:
 	la $a0, buffer
 	li $a1, 3
 	li $v0, 8
@@ -7,5 +7,5 @@ entryReadBool:
 	lb $v0, buffer
 	li $t1, 84
 	seq $v0, $v0, $t1
-exitReadBool:
+_read_bool_EXIT:
 	j $ra

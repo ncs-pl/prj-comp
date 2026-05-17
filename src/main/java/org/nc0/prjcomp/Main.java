@@ -13,7 +13,6 @@ import org.nc0.prjcomp.ir.com.Label;
 import org.nc0.prjcomp.ir.translation.Translate;
 import org.nc0.prjcomp.parser.sdmLexer;
 import org.nc0.prjcomp.parser.sdmParser;
-import org.nc0.prjcomp.printers.AstPrinter;
 import org.nc0.prjcomp.printers.IrPrinter;
 import org.nc0.prjcomp.semantic.SymbolTable;
 import org.nc0.prjcomp.semantic.TableBuilder;
@@ -22,24 +21,21 @@ import org.nc0.prjcomp.support.Errors;
 import org.nc0.prjcomp.support.Pair;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.PathMatcher;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) throws IOException {
         // 1. Read input parameters
         var input = CharStreams.fromStream(System.in);
-        // TODO(nico): ensure there are some parameters
+        // TODO(nico): make it read a file path and open the file instead!
 
         // 2. Lexing
-        System.out.println("--- Lexing ---");
+        // System.out.println("--- Lexing ---");
         var lexer = new sdmLexer(input);
         var tokens = new CommonTokenStream(lexer);
 
         // 3. Parsing
-        System.out.println("--- Parsing ---");
+        // System.out.println("--- Parsing ---");
         var parser = new sdmParser(tokens);
         ParseTree tree = parser.program();
         if (parser.getNumberOfSyntaxErrors() != 0) {
@@ -48,17 +44,17 @@ public class Main {
         }
 
         var ast = (Program) tree.accept(new AstBuild());
-        ast.accept(new AstPrinter());
-        System.out.print("\n");
+        // ast.accept(new AstPrinter());
+        // System.out.print("\n");
 
         // 4. Symbol table resolution
-        System.out.println("--- Symbol resolution ---");
+        // System.out.println("--- Symbol resolution ---");
         var tableBuilder = new TableBuilder();
         ast.accept(tableBuilder);
         SymbolTable symbols = tableBuilder.getTable();
 
         // 5. Type checking
-        System.out.println("--- Type checking ---");
+        // System.out.println("--- Type checking ---");
         var typeChecker = new TypeChecker(symbols);
         ast.accept(typeChecker);
         typeChecker.check();
@@ -73,36 +69,13 @@ public class Main {
 
         // 7. Assembly code generation
         System.out.println("--- Code generating ---");
-        String name = "out.asm";
-        if (args.length == 1) {
-            name = args[0];
-        }
-        Path path = FileSystems.getDefault().getPath(name);
-        compile(path, main, fragments);
-    }
-
-    public static void compile(Path path, Label mainLabel, List<Pair<Frame, List<Command>>> fragments) {
-        Path newPath = FileSystems.getDefault().getPath(changeExtension(path, ".sdm", ".asm").getFileName().toString());
-        org.nc0.prjcomp.mips.Program.generate(newPath, mainLabel, fragments);
+        List<String> assembly = org.nc0.prjcomp.mips.Program.generate(main, fragments);
         Errors errs = org.nc0.prjcomp.mips.Program.errors;
         if (errs.hasErrors()) {
-            System.out.println("Erreur génération MIPS");
+            System.out.println("Errors while generating assembly:");
             errs.print();
             System.exit(1);
         }
-    }
-
-    private static Path changeExtension(Path path, String oldExt, String newExt) {
-        PathMatcher pm = FileSystems.getDefault().getPathMatcher("glob:*" + oldExt);
-        if (pm.matches(path.getFileName())) {
-            String nameWithExtension = path.getFileName().toString();
-            int endIndex = nameWithExtension.length() - oldExt.length();
-            String name = nameWithExtension.substring(0, endIndex);
-            if (path.getParent() != null)
-                return path.getParent().resolve(name + newExt);
-            else
-                return FileSystems.getDefault().getPath(name + newExt);
-        }
-        return path;
+        System.out.println(String.join("\n", assembly));
     }
 }

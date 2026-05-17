@@ -1,3 +1,0 @@
-resources/print_int.asm
-resources/read_int.asm
-resources/read_bool.asm

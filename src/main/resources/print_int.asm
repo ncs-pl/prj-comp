@@ -1,6 +1,6 @@
 
-entryPrintInt:
+_print_int_ENTRY:
 	li $v0, 1
 	syscall
-exitPrintInt:	
+_print_int_EXIT:
 	j $ra

@@ -1,7 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Main" type="Application" factoryName="Application" nameIsGenerated="true">
     <option name="MAIN_CLASS_NAME" value="org.nc0.prjcomp.Main" />
-    <module name="tp6" />
+    <module name="prjcomp" />
+    <option name="PROGRAM_PARAMETERS" value="&lt; ./src/test/resources/test.sdm" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="org.nc0.prjcomp.*" />
